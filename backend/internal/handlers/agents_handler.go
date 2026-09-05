@@ -465,7 +465,7 @@ func (h *AgentsHandler) DeleteAgent(c *gin.Context) {
 
 	// Unassign phone numbers and website widgets pointing to this agent
 	_, _ = h.db.Exec(ctx, `UPDATE phone_numbers SET assigned_agent_id = NULL, assigned_agent_name = NULL WHERE assigned_agent_id = $1 AND tenant_id = $2`, id, tenantID)
-	_, _ = h.db.Exec(ctx, `UPDATE website_widgets SET assigned_agent_id = NULL WHERE assigned_agent_id = $1 AND tenant_id = $2`, id, tenantID)
+	_, _ = h.db.Exec(ctx, `UPDATE website_widgets SET agent_id = NULL WHERE agent_id = $1 AND tenant_id = $2`, id, tenantID)
 
 
 	query := `DELETE FROM agents WHERE id = $1 AND tenant_id = $2`

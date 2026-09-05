@@ -46,6 +46,8 @@ func (h *PhoneNumbersHandler) ensureSchema() {
 	_, _ = h.db.Exec(ctx, query)
 
 	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS capabilities JSONB DEFAULT '{"voice": true, "sms": true, "mms": false}'::jsonb;`)
+	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS assigned_agent_name VARCHAR(255);`)
+	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();`)
 }
 
 func (h *PhoneNumbersHandler) getCarrierAPIKey(ctx context.Context) (string, string) {
