@@ -261,8 +261,15 @@ export async function createAppointment(apt: any) {
 
 // 11. Live WebSockets URL
 export function getVoiceWebSocketURL(): string {
-  const wsBase = getApiBaseUrl().replace(/^http/, 'ws');
-  return `${wsBase}/ws/calls`;
+  const baseUrl = getApiBaseUrl();
+  if (baseUrl.startsWith("http")) {
+    return `${baseUrl.replace(/^http/, 'ws')}/ws/calls`;
+  }
+  if (typeof window !== "undefined") {
+    const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+    return `${protocol}//${window.location.host}${baseUrl}/ws/calls`;
+  }
+  return `ws://localhost:8080/api/v1/ws/calls`;
 }
 
 // 12. Campaigns Database API
