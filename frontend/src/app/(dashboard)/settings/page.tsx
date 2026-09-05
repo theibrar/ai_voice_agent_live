@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
@@ -400,19 +400,9 @@ export default function SettingsPage() {
             {/* 1. vLLM Neural LLM Engine Card */}
             <div className="p-5 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] space-y-4 hover:border-[#3157D5]/40 transition-colors">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#E2E8F0]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center shadow-xs font-bold text-sm">
-                    🧠
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-sm text-[#0F172A]">vLLM Neural LLM Engine (Qwen 2.5 7B AWQ)</h4>
-                      <span className="px-2 py-0.5 text-[10px] font-bold bg-indigo-100 text-indigo-800 rounded-full">
-                        NVIDIA RTX 4060 Ti GPU
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[#64748B]">Self-hosted production high-throughput OpenAI-compatible completions with AWQ 4-bit quantization</p>
-                  </div>
+                <div>
+                  <h4 className="font-bold text-sm text-[#0F172A]">vLLM Neural LLM Engine (Qwen 2.5 7B AWQ)</h4>
+                  <p className="text-[11px] text-[#64748B]">Self-hosted production high-throughput OpenAI-compatible completions with AWQ 4-bit quantization</p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -471,19 +461,14 @@ export default function SettingsPage() {
             {/* 2. Kokoro TTS Engine Card */}
             <div className="p-5 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] space-y-4 hover:border-[#3157D5]/40 transition-colors">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#E2E8F0]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-sky-100 text-sky-700 flex items-center justify-center shadow-xs font-bold text-sm">
-                    🔊
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-sm text-[#0F172A]">Kokoro Ultra-Fast Neural TTS (82M ONNX)</h4>
+                    <span className="px-2 py-0.5 text-[10px] font-bold bg-sky-100 text-sky-800 rounded-full">
+                      Sub-45ms Synthesizer
+                    </span>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-sm text-[#0F172A]">Kokoro Ultra-Fast Neural TTS (82M ONNX)</h4>
-                      <span className="px-2 py-0.5 text-[10px] font-bold bg-sky-100 text-sky-800 rounded-full">
-                        Sub-45ms Synthesizer
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[#64748B]">High-fidelity 82M open-weight neural voice synthesis with 24kHz 16-bit PCM output (English US & UK)</p>
-                  </div>
+                  <p className="text-[11px] text-[#64748B]">High-fidelity 82M open-weight neural voice synthesis with 24kHz 16-bit PCM output (English US & UK)</p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -559,19 +544,14 @@ export default function SettingsPage() {
             {/* 3. Faster-Whisper STT Engine Card */}
             <div className="p-5 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] space-y-4 hover:border-[#3157D5]/40 transition-colors">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#E2E8F0]">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shadow-xs font-bold text-sm">
-                    🎙️
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h4 className="font-bold text-sm text-[#0F172A]">Faster-Whisper CUDA Streaming Transcriber</h4>
+                    <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded-full">
+                      distil-large-v3
+                    </span>
                   </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-sm text-[#0F172A]">Faster-Whisper CUDA Streaming Transcriber</h4>
-                      <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded-full">
-                        distil-large-v3
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-[#64748B]">CUDA float16 distil-large-v3 streaming speech-to-text with sub-180ms latency and high word recognition accuracy</p>
-                  </div>
+                  <p className="text-[11px] text-[#64748B]">CUDA float16 distil-large-v3 streaming speech-to-text with sub-180ms latency and high word recognition accuracy</p>
                 </div>
 
                 <div className="flex items-center gap-2">
