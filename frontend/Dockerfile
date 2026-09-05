@@ -11,7 +11,10 @@ RUN npm install
 # Copy source code
 COPY . .
 
+# Build Next.js production application
+RUN npm run build
+
 EXPOSE 3000
 
-# Next.js dev server run with 0.0.0.0 binding
-CMD ["npm", "run", "dev", "--", "-H", "0.0.0.0"]
+# Run production Next.js server
+CMD ["npm", "run", "start", "--", "-H", "0.0.0.0"]
