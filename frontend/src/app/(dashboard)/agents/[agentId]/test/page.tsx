@@ -174,7 +174,7 @@ export default function TestAgentPlayground() {
           body: JSON.stringify({
             messages: historyMessages,
             systemPrompt: agent.systemPrompt || "You are a professional voice agent. Keep answers natural and under 30 words.",
-            model: (agent as any).llmModel || "DeepSeek-V4-Pro",
+            model: (agent as any).llmModel || "vLLM Neural LLM Engine",
             agentName: agent.name || "Apex Voice Agent",
             tools: agent.tools || [],
             knowledgeBase: agent.knowledgeBaseIds || [],
@@ -496,7 +496,7 @@ export default function TestAgentPlayground() {
               </div>
               <div className="flex items-center justify-between p-2.5 bg-[#F4F7FB] dark:bg-[#1E293B] rounded-xl">
                 <span className="text-[#78849A] dark:text-[#94A3B8]">LLM Reasoning</span>
-                <span className="font-bold text-[#172033] dark:text-white">{agent.llmModel || "GPT-4o Mini"} (110ms)</span>
+                <span className="font-bold text-[#172033] dark:text-white">{agent.llmModel || "vLLM (Qwen 2.5 7B)"} (45ms)</span>
               </div>
               <div className="flex items-center justify-between p-2.5 bg-[#F4F7FB] dark:bg-[#1E293B] rounded-xl">
                 <span className="text-[#78849A] dark:text-[#94A3B8]">TTS Engine</span>

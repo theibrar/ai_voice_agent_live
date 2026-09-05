@@ -62,7 +62,7 @@ export default function TemplatesPage() {
       avatar: "/avatars/rachel.png",
       color: tpl.color || "#3157D5",
       status: "active",
-      llmModel: "DeepSeek-V4-Pro (DeepSeek)",
+      llmModel: "vLLM Neural LLM Engine",
       voice: {
         provider: "Kokoro Neural" as any,
         voiceId: "af_bella",
@@ -125,7 +125,7 @@ export default function TemplatesPage() {
     addAgent(newAgent);
     addToast({
       title: "Agent Created from Template",
-      description: `'${tpl.title}' deployed with DeepSeek reasoning & Kokoro Neural TTS.`,
+      description: `'${tpl.title}' deployed with vLLM (Qwen 2.5 7B) reasoning & Kokoro Neural TTS.`,
       type: "success",
     });
     router.push(`/agents/${newAgent.id}/test`);
@@ -138,7 +138,7 @@ export default function TemplatesPage() {
         <div>
           <PageHeader
             title="Agent Template Library"
-            description="Industry-standard voice agent archetypes engineered with DeepSeek reasoning, Kokoro neural audio, and automated function calling."
+            description="Industry-standard voice agent archetypes engineered with vLLM (Qwen 2.5 7B) reasoning, Kokoro neural audio, and automated function calling."
           />
         </div>
         <div className="flex items-center gap-2">
@@ -230,7 +230,7 @@ export default function TemplatesPage() {
                       <Cpu className="w-3.5 h-3.5 text-[#3157D5]" /> LLM Reasoning:
                     </span>
                     <span className="font-semibold text-[#172033] dark:text-white">
-                      DeepSeek-V3 / GPT-4o
+                      vLLM (Qwen 2.5 7B AWQ)
                     </span>
                   </div>
                   <div className="flex items-center justify-between text-[11px]">

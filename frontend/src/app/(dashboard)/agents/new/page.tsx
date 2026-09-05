@@ -437,7 +437,7 @@ If the customer wants a meeting, use the book_appointment tool.`);
             <div className="space-y-5 animate-in fade-in duration-150">
               <div>
                 <h2 className="text-base font-bold text-[#172033]">2. LLM Reasoning Model & Neural Voice</h2>
-                <p className="text-xs text-[#78849A]">Select your core reasoning LLM model (OpenAI, Google Gemini, DeepSeek) and customize voice persona.</p>
+                <p className="text-xs text-[#78849A]">Select your core reasoning LLM model (vLLM Neural Engine, OpenAI, Google Gemini) and customize voice persona.</p>
               </div>
 
               {/* LLM Model Dropdown Selector (Matching Screenshots 1 & 2) */}

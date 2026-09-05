@@ -527,7 +527,7 @@ export default function DashboardPage() {
               {translate("Enterprise Voice Operations", language)}
             </h2>
             <p className="text-xs md:text-sm text-white/85 max-w-xl leading-relaxed">
-              {translate("Real-time conversational intelligence with ultra-low latency STT, GPT-4o reasoning, and automated CRM & calendar scheduling.", language)}
+              {translate("Real-time conversational intelligence with ultra-low latency STT, vLLM (Qwen 2.5 7B) reasoning, and automated CRM & calendar scheduling.", language)}
             </p>
           </div>
 
