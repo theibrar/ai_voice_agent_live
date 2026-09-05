@@ -1,6 +1,6 @@
 /**
  * Real-Time Kokoro-82M Neural Audio Synthesis Client
- * Exclusively connects to the GPU worker cluster at server.ibrasoft.com.
+ * Exclusively connects to the GPU worker cluster at 77.54.200.11:15188.
  * Local browser speech synthesis is STRICTLY DISABLED.
  */
 
@@ -34,14 +34,14 @@ export async function playKokoroNeuralAudio(
   const startTime = Date.now();
 
   const endpoints = [
+    "/api/tts/synthesize",
     "http://77.54.200.11:15188/synthesize",
-    "https://server.ibrasoft.com/api/v1/tts/synthesize",
   ];
 
   for (const endpoint of endpoints) {
     try {
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 6000);
+      const timeoutId = setTimeout(() => controller.abort(), 8000);
 
       const res = await fetch(endpoint, {
         method: "POST",
@@ -99,7 +99,7 @@ export async function playKokoroNeuralAudio(
 
   return {
     success: false,
-    error: "GPU Neural Server (server.ibrasoft.com) is offline or unreachable. Please start voice-agent-gpu on your server.",
+    error: "GPU Neural TTS Server (77.54.200.11) is unreachable or offline.",
   };
 }
 

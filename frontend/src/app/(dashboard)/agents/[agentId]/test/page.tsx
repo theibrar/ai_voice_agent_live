@@ -136,7 +136,7 @@ export default function TestAgentPlayground() {
       setGpuStatus("offline");
       addToast({
         title: "GPU Server Offline",
-        description: "server.ibrasoft.com voice worker is offline. Speech synthesis stopped (browser speech disabled).",
+        description: result.error || "GPU voice worker is offline or unreachable. Speech synthesis stopped.",
         type: "error",
       });
     }
@@ -503,7 +503,7 @@ export default function TestAgentPlayground() {
                 <span className="font-bold text-[#172033] dark:text-white">Kokoro-82M CUDA (38ms)</span>
               </div>
               <div className="flex items-center justify-between p-2.5 bg-[#F4F7FB] dark:bg-[#1E293B] rounded-xl">
-                <span className="text-[#78849A] dark:text-[#94A3B8]">GPU Cluster (server.ibrasoft.com)</span>
+                <span className="text-[#78849A] dark:text-[#94A3B8]">GPU Cluster (77.54.200.11)</span>
                 {gpuStatus === "online" ? (
                   <span className="font-bold text-[#16A36A] flex items-center gap-1">
                     <span className="w-2 h-2 rounded-full bg-[#16A36A] animate-pulse" /> Online
