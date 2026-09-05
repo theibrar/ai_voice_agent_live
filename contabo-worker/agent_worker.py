@@ -780,13 +780,20 @@ def main():
     if len(sys.argv) == 1:
         sys.argv.append("start")
 
-    cli.run_app(
-        WorkerOptions(
-            entrypoint_fnc=entrypoint,
-            worker_type="room",
-            max_retry=3,
-        )
-    )
+    try:
+        from livekit.agents import WorkerType
+        wt = WorkerType.ROOM
+    except Exception:
+        wt = None
+
+    opts = {
+        "entrypoint_fnc": entrypoint,
+        "max_retry": 3,
+    }
+    if wt is not None:
+        opts["worker_type"] = wt
+
+    cli.run_app(WorkerOptions(**opts))
 
 
 if __name__ == "__main__":
