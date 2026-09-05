@@ -141,12 +141,7 @@ export default function LoginPage() {
           )}
 
           <form
-            method="POST"
-            action="#"
-            onSubmit={(e) => {
-              e.preventDefault();
-              handleSubmit(onSubmit)(e);
-            }}
+            onSubmit={handleSubmit(onSubmit)}
             className="space-y-4"
           >
             {/* Email Field */}
