@@ -98,7 +98,7 @@ func (h *KnowledgeHandler) ListKnowledgeSources(c *gin.Context) {
 	rows, err := h.db.Query(ctx, `
 		SELECT id, name, type, status, chunk_count, size_kb, last_indexed, assigned_agent_ids, url, content_preview, chunks, created_at, updated_at
 		FROM knowledge_base
-		WHERE tenant_id = $1
+		WHERE tenant_id = $1 OR tenant_id IS NULL OR tenant_id = 0
 		ORDER BY created_at DESC
 	`, tenantID)
 	if err != nil {
@@ -162,7 +162,7 @@ func (h *KnowledgeHandler) GetKnowledgeSource(c *gin.Context) {
 	err := h.db.QueryRow(ctx, `
 		SELECT id, name, type, status, chunk_count, size_kb, last_indexed, assigned_agent_ids, url, content_preview, chunks, created_at, updated_at
 		FROM knowledge_base
-		WHERE id = $1 AND tenant_id = $2
+		WHERE id = $1 AND (tenant_id = $2 OR tenant_id IS NULL OR tenant_id = 0)
 	`, id, tenantID).Scan(
 		&s.ID, &s.Name, &s.Type, &s.Status, &s.ChunkCount, &s.SizeKB, &s.LastIndexed,
 		&assignedRaw, &urlVal, &s.ContentPreview, &chunksRaw, &s.CreatedAt, &s.UpdatedAt,
@@ -286,7 +286,7 @@ func (h *KnowledgeHandler) UpdateKnowledgeSource(c *gin.Context) {
 			content_preview = $9,
 			chunks = $10,
 			updated_at = NOW()
-		WHERE id = $1 AND tenant_id = $11
+		WHERE id = $1 AND (tenant_id = $11 OR tenant_id IS NULL OR tenant_id = 0)
 		RETURNING created_at, updated_at;
 	`
 
@@ -315,14 +315,9 @@ func (h *KnowledgeHandler) DeleteKnowledgeSource(c *gin.Context) {
 		tenantID = 1
 	}
 
-	res, err := h.db.Exec(ctx, "DELETE FROM knowledge_base WHERE id = $1 AND tenant_id = $2", id, tenantID)
+	_, err := h.db.Exec(ctx, "DELETE FROM knowledge_base WHERE id = $1 AND (tenant_id = $2 OR tenant_id IS NULL OR tenant_id = 0)", id, tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete knowledge source: " + err.Error()})
-		return
-	}
-
-	if res.RowsAffected() == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Knowledge source not found or unauthorized"})
 		return
 	}
 

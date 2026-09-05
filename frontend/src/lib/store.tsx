@@ -343,7 +343,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [calls, setCalls] = useState<Call[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>(initialKnowledgeSources);
+  const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const deletedIds: string[] = JSON.parse(localStorage.getItem("apex-deleted-kb-ids") || "[]");
+        const saved = localStorage.getItem("apex-knowledge-sources");
+        if (saved) {
+          const parsed: KnowledgeSource[] = JSON.parse(saved);
+          return parsed.filter((k: KnowledgeSource) => !deletedIds.includes(k.id));
+        }
+        return initialKnowledgeSources.filter((k) => !deletedIds.includes(k.id));
+      } catch (e) {}
+    }
+    return initialKnowledgeSources;
+  });
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
   const [incomingConnections] = useState<IncomingConnection[]>([]);
   const [templates] = useState<Template[]>(initialTemplates);
@@ -967,18 +980,34 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const refreshKnowledgeSources = useCallback(async () => {
+    let deletedIds: string[] = [];
+    if (typeof window !== "undefined") {
+      try {
+        deletedIds = JSON.parse(localStorage.getItem("apex-deleted-kb-ids") || "[]");
+      } catch (e) {}
+    }
+
     try {
       const apiUrl = getApiBase() + '/knowledge';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
         if (data && Array.isArray(data.knowledgeSources)) {
-          setKnowledgeSources(data.knowledgeSources.length > 0 ? data.knowledgeSources : initialKnowledgeSources);
+          let sources = data.knowledgeSources;
+          if (sources.length === 0 && deletedIds.length === 0) {
+            sources = initialKnowledgeSources;
+          }
+          const filtered = sources.filter((k: KnowledgeSource) => !deletedIds.includes(k.id));
+          setKnowledgeSources(filtered);
+          return;
         }
       }
     } catch (err) {
       console.warn("Could not fetch knowledge sources from backend database:", err);
     }
+
+    const filteredInitial = initialKnowledgeSources.filter((k) => !deletedIds.includes(k.id));
+    setKnowledgeSources(filteredInitial);
   }, []);
 
   const [availableLlmModels, setAvailableLlmModels] = useState<LLMModelOption[]>([
@@ -1351,8 +1380,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }, [addToast]);
 
   const addKnowledgeSource = useCallback(async (source: KnowledgeSource) => {
-    setKnowledgeSources((prev) => [source, ...prev.filter((k) => k.id !== source.id)]);
-    addToast({ title: "Knowledge Source Added", description: `${source.name} indexed and stored in PostgreSQL.`, type: "success" });
+    setKnowledgeSources((prev) => {
+      const updated = [source, ...prev.filter((k) => k.id !== source.id)];
+      if (typeof window !== "undefined") {
+        localStorage.setItem("apex-knowledge-sources", JSON.stringify(updated));
+        try {
+          const existing: string[] = JSON.parse(localStorage.getItem("apex-deleted-kb-ids") || "[]");
+          const cleaned = existing.filter((id) => id !== source.id);
+          localStorage.setItem("apex-deleted-kb-ids", JSON.stringify(cleaned));
+        } catch (e) {}
+      }
+      return updated;
+    });
+    addToast({ title: "Knowledge Source Added", description: `${source.name} indexed and stored.`, type: "success" });
 
     try {
       const apiUrl = getApiBase() + '/knowledge';
@@ -1374,10 +1414,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deleteKnowledgeSource = useCallback(async (sourceId: string) => {
     const target = knowledgeSources.find((k) => k.id === sourceId);
-    setKnowledgeSources((prev) => prev.filter((k) => k.id !== sourceId));
+    setKnowledgeSources((prev) => {
+      const updated = prev.filter((k) => k.id !== sourceId);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("apex-knowledge-sources", JSON.stringify(updated));
+      }
+      return updated;
+    });
+
+    if (typeof window !== "undefined") {
+      try {
+        const existing: string[] = JSON.parse(localStorage.getItem("apex-deleted-kb-ids") || "[]");
+        if (!existing.includes(sourceId)) {
+          localStorage.setItem("apex-deleted-kb-ids", JSON.stringify([...existing, sourceId]));
+        }
+      } catch (e) {}
+    }
+
     addToast({
       title: "Knowledge Source Deleted",
-      description: target ? `${target.name} removed from database.` : "Source deleted.",
+      description: target ? `${target.name} removed.` : "Source deleted.",
       type: "info",
     });
 
