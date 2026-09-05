@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useSuperAdminStore } from "@/lib/super-admin-store";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, getApiBase } from "@/lib/auth-context";
 import {
   ShieldAlert,
   Lock,
@@ -33,7 +33,7 @@ export default function SuperAdminLoginPage() {
     setAuthError(null);
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1") + "/auth/login";
+      const apiUrl = getApiBase() + "/auth/login";
       const res = await fetch(apiUrl, {
         method: "POST",
         credentials: "include",

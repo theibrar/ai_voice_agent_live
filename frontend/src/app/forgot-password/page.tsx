@@ -7,6 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Headphones, ArrowLeft, Mail, CheckCircle2 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
+import { getApiBase } from "@/lib/auth-context";
 
 const schema = z.object({
   email: z.string().email("Please enter a valid work email"),
@@ -33,7 +34,7 @@ export default function ForgotPasswordPage() {
     setAuthError(null);
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1") + "/auth/forgot-password";
+      const apiUrl = getApiBase() + "/auth/forgot-password";
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

@@ -31,6 +31,15 @@ import { initialABExperiments } from "./mock-data/ab-tests";
 import { initialFunnelSteps } from "./mock-data/funnel-analytics";
 import { getStoredLanguage, setStoredLanguage, BASIC_LANGUAGES } from "./languages";
 
+export const getApiBase = () => {
+  if (typeof window !== "undefined") {
+    if (window.location.protocol === "https:" || window.location.hostname !== "localhost") {
+      return "/api/v1";
+    }
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+};
+
 const apiFetch = (url: string, init?: RequestInit) => {
   return fetch(url, {
     credentials: "include",
@@ -426,7 +435,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshGoogleStatus = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/integrations/google/status';
+      const apiUrl = getApiBase() + '/integrations/google/status';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -444,7 +453,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const connectGoogleAccount = useCallback(async (credentials: { email: string; client_id?: string; client_secret?: string; account_name?: string }) => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/integrations/google/connect';
+      const apiUrl = getApiBase() + '/integrations/google/connect';
       const res = await apiFetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -470,7 +479,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const disconnectGoogleAccount = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/integrations/google/disconnect';
+      const apiUrl = getApiBase() + '/integrations/google/disconnect';
       await apiFetch(apiUrl, { method: "POST" });
       setGoogleAccountConnected(false);
       setGoogleAccountEmail("");
@@ -488,7 +497,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const syncGoogleCalendar = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/integrations/google-calendar/sync';
+      const apiUrl = getApiBase() + '/integrations/google-calendar/sync';
       const res = await apiFetch(apiUrl, { method: "POST" });
       if (res.ok) {
         addToast({
@@ -504,7 +513,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const createGoogleSheet = useCallback(async (title?: string) => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/integrations/google-sheets/create';
+      const apiUrl = getApiBase() + '/integrations/google-sheets/create';
       const res = await apiFetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -526,7 +535,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const syncGoogleSheetsData = useCallback(async (tab: string = "Leads_2026") => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/integrations/google-sheets/sync';
+      const apiUrl = getApiBase() + '/integrations/google-sheets/sync';
       const res = await apiFetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -575,7 +584,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAgents = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/agents';
+      const apiUrl = getApiBase() + '/agents';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -594,7 +603,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addToast({ title: "Agent Saved", description: `${updated.name} configuration updated.`, type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/agents/${updated.id}`;
+      const apiUrl = getApiBase() + `/agents/${updated.id}`;
       await apiFetch(apiUrl, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -623,7 +632,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/agents/${agentId}/status`;
+      const apiUrl = getApiBase() + `/agents/${agentId}/status`;
       await apiFetch(apiUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -640,7 +649,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addToast({ title: "Agent Created", description: `${newAgent.name} is ready for deployment.`, type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/agents';
+      const apiUrl = getApiBase() + '/agents';
       await apiFetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -672,7 +681,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addToast({ title: "Agent Duplicated", description: `Created copy of ${original.name}.`, type: "info" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/agents';
+      const apiUrl = getApiBase() + '/agents';
       await apiFetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -690,7 +699,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addToast({ title: "Agent Deleted", description: target ? `${target.name} has been deleted.` : "Agent removed from database.", type: "warning" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/agents/${agentId}`;
+      const apiUrl = getApiBase() + `/agents/${agentId}`;
       await apiFetch(apiUrl, { method: "DELETE" });
       await refreshAgents();
     } catch (err) {
@@ -701,7 +710,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshCampaigns = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/campaigns';
+      const apiUrl = getApiBase() + '/campaigns';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -731,7 +740,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     );
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/campaigns/${campaignId}/status`;
+      const apiUrl = getApiBase() + `/campaigns/${campaignId}/status`;
       await apiFetch(apiUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -747,7 +756,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addToast({ title: "Campaign Launched", description: `${campaign.name} stored in database and dispatch initialized.`, type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/campaigns';
+      const apiUrl = getApiBase() + '/campaigns';
       await apiFetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -763,7 +772,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addToast({ title: "Campaign Deleted", description: "Campaign removed from database.", type: "info" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/campaigns/${campaignId}`;
+      const apiUrl = getApiBase() + `/campaigns/${campaignId}`;
       await apiFetch(apiUrl, { method: "DELETE" });
     } catch (err) {
       console.warn("Failed to delete campaign from database:", err);
@@ -816,7 +825,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshCalls = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/calls';
+      const apiUrl = getApiBase() + '/calls';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -865,7 +874,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshContacts = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/contacts';
+      const apiUrl = getApiBase() + '/contacts';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -883,7 +892,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addToast({ title: "Contact Added", description: `${contact.name} added to CRM lead pool.`, type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/contacts';
+      const apiUrl = getApiBase() + '/contacts';
       await apiFetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -910,7 +919,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addToast({ title: "Contact Deleted", description: "Lead record removed from database.", type: "info" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/contacts/${contactId}`;
+      const apiUrl = getApiBase() + `/contacts/${contactId}`;
       await apiFetch(apiUrl, { method: "DELETE" });
       await refreshContacts();
     } catch (err) {
@@ -923,7 +932,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addToast({ title: "Lead Notes Saved", description: "CRM record updated with behavioral insights.", type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/contacts/${contactId}/notes`;
+      const apiUrl = getApiBase() + `/contacts/${contactId}/notes`;
       await apiFetch(apiUrl, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -937,7 +946,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAppointments = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/appointments';
+      const apiUrl = getApiBase() + '/appointments';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -955,7 +964,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshKnowledgeSources = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/knowledge';
+      const apiUrl = getApiBase() + '/knowledge';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -974,7 +983,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshLlmModels = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/models';
+      const apiUrl = getApiBase() + '/models';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -989,7 +998,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshWebsiteWidgets = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/widgets';
+      const apiUrl = getApiBase() + '/widgets';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -1004,7 +1013,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshFunnelSteps = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/analytics/funnel';
+      const apiUrl = getApiBase() + '/analytics/funnel';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -1019,7 +1028,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAnalyticsOverview = useCallback(async (timeRange = "30d") => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/analytics/overview?range=${timeRange}`;
+      const apiUrl = getApiBase() + `/analytics/overview?range=${timeRange}`;
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -1034,7 +1043,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAbExperiments = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/ab-experiments';
+      const apiUrl = getApiBase() + '/ab-experiments';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -1049,7 +1058,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshWebhooks = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/webhooks';
+      const apiUrl = getApiBase() + '/webhooks';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -1064,7 +1073,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const addWebhook = useCallback(async (webhook: { name: string; url: string; events: string[]; secret?: string }) => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/webhooks';
+      const apiUrl = getApiBase() + '/webhooks';
       const res = await apiFetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1081,7 +1090,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const deleteWebhook = useCallback(async (id: string | number) => {
     setWebhooksList((prev) => prev.filter((w) => w.id !== id));
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/webhooks/${id}`;
+      const apiUrl = getApiBase() + `/webhooks/${id}`;
       await apiFetch(apiUrl, { method: "DELETE" });
       await refreshWebhooks();
     } catch (err) {
@@ -1091,7 +1100,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshAnnouncements = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/announcements';
+      const apiUrl = getApiBase() + '/announcements';
       const res = await apiFetch(apiUrl, { method: "GET" });
       if (res.ok) {
         const data = await res.json();
@@ -1120,7 +1129,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const refreshPhoneNumbers = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/phone-numbers';
+      const apiUrl = getApiBase() + '/phone-numbers';
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
@@ -1149,7 +1158,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const provisionPhoneNumber = useCallback(async (data: { phoneNumber: string; friendlyName: string; country?: string; assignedAgentId?: string; assignedCampaignId?: string; monthlyCost?: number }) => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/phone-numbers/provision';
+      const apiUrl = getApiBase() + '/phone-numbers/provision';
       const res = await apiFetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1179,7 +1188,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const assignPhoneNumber = useCallback(async (id: string, updates: { assignedAgentId?: string; assignedCampaignId?: string; friendlyName?: string }) => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/phone-numbers/${id}/assign`;
+      const apiUrl = getApiBase() + `/phone-numbers/${id}/assign`;
       const res = await apiFetch(apiUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -1200,7 +1209,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const deletePhoneNumber = useCallback(async (id: string) => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/phone-numbers/${id}`;
+      const apiUrl = getApiBase() + `/phone-numbers/${id}`;
       const res = await apiFetch(apiUrl, { method: "DELETE" });
       if (res.ok) {
         addToast({
@@ -1277,7 +1286,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAppointments((prev) => [newApt, ...prev.filter((a) => a.id !== newApt.id)]);
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/appointments';
+      const apiUrl = getApiBase() + '/appointments';
       const res = await apiFetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1314,7 +1323,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addToast({ title: "Appointment Updated", description: `Status changed to ${status}.`, type: "info" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/appointments/${aptId}/status`;
+      const apiUrl = getApiBase() + `/appointments/${aptId}/status`;
       await apiFetch(apiUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -1330,7 +1339,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addToast({ title: "Appointment Deleted", description: "Record removed from database.", type: "info" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/appointments/${aptId}`;
+      const apiUrl = getApiBase() + `/appointments/${aptId}`;
       await apiFetch(apiUrl, { method: "DELETE" });
     } catch (err) {
       console.warn("Failed to delete appointment from database:", err);
@@ -1342,7 +1351,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     addToast({ title: "Knowledge Source Added", description: `${source.name} indexed and stored in PostgreSQL.`, type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/knowledge';
+      const apiUrl = getApiBase() + '/knowledge';
       const res = await apiFetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1369,7 +1378,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/knowledge/${sourceId}`;
+      const apiUrl = getApiBase() + `/knowledge/${sourceId}`;
       await apiFetch(apiUrl, { method: "DELETE" });
     } catch (err) {
       console.warn("Failed to delete knowledge source from database:", err);
@@ -1385,7 +1394,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/ab-experiments';
+      const apiUrl = getApiBase() + '/ab-experiments';
       await apiFetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1412,7 +1421,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/ab-experiments/${experimentId}/winner`;
+      const apiUrl = getApiBase() + `/ab-experiments/${experimentId}/winner`;
       await apiFetch(apiUrl, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
@@ -1437,7 +1446,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/widgets';
+      const apiUrl = getApiBase() + '/widgets';
       await apiFetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1457,7 +1466,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/widgets/${id}`;
+      const apiUrl = getApiBase() + `/widgets/${id}`;
       await apiFetch(apiUrl, { method: "DELETE" });
     } catch (err) {
       console.warn("Failed to delete widget from database:", err);

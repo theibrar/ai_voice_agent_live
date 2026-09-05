@@ -23,6 +23,7 @@ import {
 } from "./mock-data/super-admin";
 
 import { getStoredLanguage, setStoredLanguage } from "./languages";
+import { getApiBase } from "./auth-context";
 
 export interface SuperAdminToast {
   id: string;
@@ -191,7 +192,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
 
   const refreshTenants = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/tenants';
+      const apiUrl = getApiBase() + '/superadmin/tenants';
       const res = await fetch(apiUrl, {
         method: "GET",
         credentials: "include",
@@ -212,7 +213,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
 
   const refreshSuperAdmins = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/auth/users';
+      const apiUrl = getApiBase() + '/auth/users';
       const res = await fetch(apiUrl, {
         method: "GET",
         credentials: "include",
@@ -244,14 +245,14 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
 
   const refreshEngines = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/ai-engines';
+      const apiUrl = getApiBase() + '/superadmin/ai-engines';
       let res = await fetch(apiUrl, {
         method: "GET",
         credentials: "include",
         cache: 'no-store',
       });
       if (!res.ok) {
-        const fallbackUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/ai-engines';
+        const fallbackUrl = getApiBase() + '/ai-engines';
         res = await fetch(fallbackUrl, {
           method: "GET",
           credentials: "include",
@@ -290,7 +291,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
 
   const refreshSipCarriers = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/trunks';
+      const apiUrl = getApiBase() + '/superadmin/trunks';
       const res = await fetch(apiUrl, {
         method: "GET",
         credentials: "include",
@@ -311,7 +312,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
 
   const refreshPlans = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/plans';
+      const apiUrl = getApiBase() + '/superadmin/plans';
       const res = await fetch(apiUrl, {
         method: "GET",
         credentials: "include",
@@ -330,7 +331,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
 
   const refreshGateways = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/gateways';
+      const apiUrl = getApiBase() + '/superadmin/gateways';
       const res = await fetch(apiUrl, {
         method: "GET",
         credentials: "include",
@@ -349,7 +350,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
 
   const refreshAnnouncements = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/announcements';
+      const apiUrl = getApiBase() + '/superadmin/announcements';
       const res = await fetch(apiUrl, {
         method: "GET",
         credentials: "include",
@@ -368,7 +369,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
 
   const refreshGlobalCalls = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/calls';
+      const apiUrl = getApiBase() + '/calls';
       const res = await fetch(apiUrl, {
         method: "GET",
         credentials: "include",
@@ -489,7 +490,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Tenant Provisioned", description: `Organization '${tenantData.orgName}' is ready.`, type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/tenants';
+      const apiUrl = getApiBase() + '/superadmin/tenants';
       const res = await fetch(apiUrl, {
         method: "POST",
         credentials: "include",
@@ -520,7 +521,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Plan Assigned & Balance Updated", description: `Assigned ${planName} (${billingCycle}) with voice credits grant in database.`, type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/tenants/assign-plan';
+      const apiUrl = getApiBase() + '/superadmin/tenants/assign-plan';
       const res = await fetch(apiUrl, {
         method: "POST",
         credentials: "include",
@@ -555,7 +556,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Credits Updated", description: `${sign}$${deltaAmount.toFixed(2)} applied.`, type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/tenants/credits';
+      const apiUrl = getApiBase() + '/superadmin/tenants/credits';
       await fetch(apiUrl, {
         method: "POST",
         credentials: "include",
@@ -573,7 +574,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Tenant Status Updated", description: `Organization is now ${status}.`, type: "info" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/tenants/${tenantId}/status`;
+      const apiUrl = getApiBase() + `/superadmin/tenants/${tenantId}/status`;
       await fetch(apiUrl, {
         method: "PATCH",
         credentials: "include",
@@ -615,7 +616,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Tenant Account Customized", description: `Updated admin profile & security credentials.${passMsg}`, type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/tenants/${tenantId}`;
+      const apiUrl = getApiBase() + `/superadmin/tenants/${tenantId}`;
       await fetch(apiUrl, {
         method: "PUT",
         credentials: "include",
@@ -636,7 +637,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Organization Deleted", description: `Permanently removed '${orgName}' and revoked its admin credentials.`, type: "danger" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/tenants/${tenantId}`;
+      const apiUrl = getApiBase() + `/superadmin/tenants/${tenantId}`;
       await fetch(apiUrl, {
         method: "DELETE",
         credentials: "include",
@@ -682,7 +683,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Plan Created", description: `${planData.name} is now stored in database.`, type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/plans';
+      const apiUrl = getApiBase() + '/superadmin/plans';
       await fetch(apiUrl, {
         method: "POST",
         credentials: "include",
@@ -701,7 +702,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Plan Updated", description: "Plan changes saved in database.", type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/plans/${id}`;
+      const apiUrl = getApiBase() + `/superadmin/plans/${id}`;
       await fetch(apiUrl, {
         method: "PUT",
         credentials: "include",
@@ -722,7 +723,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Plan Deleted", description: `'${planName}' deleted from platform database.`, type: "danger" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/plans/${id}`;
+      const apiUrl = getApiBase() + `/superadmin/plans/${id}`;
       await fetch(apiUrl, {
         method: "DELETE",
         credentials: "include",
@@ -747,7 +748,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Gateway Added", description: `${gwData.name} saved to database.`, type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/gateways';
+      const apiUrl = getApiBase() + '/superadmin/gateways';
       await fetch(apiUrl, {
         method: "POST",
         credentials: "include",
@@ -766,7 +767,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Gateway Updated", description: "Changes saved to database.", type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/gateways/${id}`;
+      const apiUrl = getApiBase() + `/superadmin/gateways/${id}`;
       await fetch(apiUrl, {
         method: "PUT",
         credentials: "include",
@@ -786,7 +787,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Gateway Removed", description: `${gw?.name || id} deleted from database.`, type: "info" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/gateways/${id}`;
+      const apiUrl = getApiBase() + `/superadmin/gateways/${id}`;
       await fetch(apiUrl, {
         method: "DELETE",
         credentials: "include",
@@ -803,7 +804,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Gateway Status Changed", description: `Set to ${status}.`, type: "info" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/gateways/${id}`;
+      const apiUrl = getApiBase() + `/superadmin/gateways/${id}`;
       await fetch(apiUrl, {
         method: "PUT",
         credentials: "include",
@@ -827,7 +828,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Default Gateway Updated", description: "Primary routing rule saved in database.", type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/gateways/${id}/set-default`;
+      const apiUrl = getApiBase() + `/superadmin/gateways/${id}/set-default`;
       await fetch(apiUrl, {
         method: "POST",
         credentials: "include",
@@ -840,7 +841,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
 
   const testGatewayDispatch = useCallback(async (id: string, recipient: string) => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/gateways/${id}/test`;
+      const apiUrl = getApiBase() + `/superadmin/gateways/${id}/test`;
       const res = await fetch(apiUrl, {
         method: "POST",
         credentials: "include",
@@ -865,7 +866,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     setSipCarriers((prev) => [...prev, optimisticCarrier]);
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/trunks';
+      const apiUrl = getApiBase() + '/superadmin/trunks';
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -910,7 +911,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Carrier Status Updated", description: `Trunk is now ${status}.`, type: "info" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/trunks/${id}/status`;
+      const apiUrl = getApiBase() + `/superadmin/trunks/${id}/status`;
       await fetch(apiUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -928,7 +929,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Primary Carrier Set", description: "Default carrier routing updated.", type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/trunks/${id}/set-default`;
+      const apiUrl = getApiBase() + `/superadmin/trunks/${id}/set-default`;
       await fetch(apiUrl, {
         method: "POST",
         credentials: "include",
@@ -944,7 +945,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Carrier Updated", description: "Changes saved to database.", type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/trunks/${id}`;
+      const apiUrl = getApiBase() + `/superadmin/trunks/${id}`;
       await fetch(apiUrl, {
         method: "PUT",
         credentials: "include",
@@ -964,7 +965,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Carrier Removed", description: `${carrierToDelete?.name || id} removed from trunk pool.`, type: "warning" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/trunks/${id}`;
+      const apiUrl = getApiBase() + `/superadmin/trunks/${id}`;
       await fetch(apiUrl, {
         method: "DELETE",
         credentials: "include",
@@ -987,7 +988,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Custom Model Registered", description: `${engineData.name} saved to PostgreSQL and available for Admin.`, type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/ai-engines';
+      const apiUrl = getApiBase() + '/superadmin/ai-engines';
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1021,7 +1022,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Engine Updated", description: `${engineData.name} updated in PostgreSQL database.`, type: "success" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/ai-engines';
+      const apiUrl = getApiBase() + '/superadmin/ai-engines';
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1061,7 +1062,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Engine Status Updated", description: `Engine status set to ${nextStatus} in database.`, type: "info" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/ai-engines/${id}/status`;
+      const apiUrl = getApiBase() + `/superadmin/ai-engines/${id}/status`;
       const res = await fetch(apiUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -1082,7 +1083,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Engine Removed", description: "Model permanently removed from database.", type: "warning" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/ai-engines/${id}`;
+      const apiUrl = getApiBase() + `/superadmin/ai-engines/${id}`;
       const res = await fetch(apiUrl, {
         method: "DELETE",
         credentials: "include",
@@ -1101,7 +1102,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Tier Requirement Updated", description: `Restricted to ${tierRequirement} in database.`, type: "info" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/ai-engines/${id}/status`;
+      const apiUrl = getApiBase() + `/superadmin/ai-engines/${id}/status`;
       const res = await fetch(apiUrl, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
@@ -1179,7 +1180,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     setAnnouncements((prev) => [optimisticAnc, ...prev]);
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/announcements';
+      const apiUrl = getApiBase() + '/superadmin/announcements';
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -1216,7 +1217,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Announcement Status Toggled", description: "Updated tenant banner status.", type: "info" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/announcements/${id}/toggle`;
+      const apiUrl = getApiBase() + `/superadmin/announcements/${id}/toggle`;
       await fetch(apiUrl, {
         method: "PATCH",
         credentials: "include",
@@ -1231,7 +1232,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     addToast({ title: "Announcement Deleted", description: "Removed from database and tenant dashboards.", type: "warning" });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/superadmin/announcements/${id}`;
+      const apiUrl = getApiBase() + `/superadmin/announcements/${id}`;
       await fetch(apiUrl, {
         method: "DELETE",
         credentials: "include",

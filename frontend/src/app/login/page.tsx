@@ -52,6 +52,20 @@ export default function LoginPage() {
 
   const [authError, setAuthError] = useState<string | null>(null);
 
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const urlEmail = params.get("email");
+      const urlPass = params.get("password");
+      if (urlEmail) setValue("email", urlEmail);
+      if (urlPass) setValue("password", urlPass);
+      if (urlEmail && urlPass) {
+        window.history.replaceState({}, document.title, window.location.pathname);
+        onSubmit({ email: urlEmail, password: urlPass, rememberMe: true });
+      }
+    }
+  }, [setValue]);
+
   const onSubmit = async (data: LoginFormValues) => {
     setIsLoading(true);
     setAuthError(null);
@@ -126,7 +140,15 @@ export default function LoginPage() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <form
+            method="POST"
+            action="#"
+            onSubmit={(e) => {
+              e.preventDefault();
+              handleSubmit(onSubmit)(e);
+            }}
+            className="space-y-4"
+          >
             {/* Email Field */}
             <div>
               <label className="block text-xs font-semibold text-[#172033] mb-1.5">

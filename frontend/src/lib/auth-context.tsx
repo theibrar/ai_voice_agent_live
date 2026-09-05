@@ -48,8 +48,16 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-// Defined OUTSIDE the component so it is never recreated between renders
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+export const getApiBase = () => {
+  if (typeof window !== "undefined") {
+    // When in browser on production domain or HTTPS, use relative path '/api/v1'
+    // This guarantees same-origin requests through Nginx without mixed-content or localhost errors
+    if (window.location.protocol === "https:" || window.location.hostname !== "localhost") {
+      return "/api/v1";
+    }
+  }
+  return process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1";
+};
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -69,7 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // No dependencies — stable function reference forever
   const refreshAuth = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/auth/me`, {
+      const res = await fetch(`${getApiBase()}/auth/me`, {
         method: "GET",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -115,7 +123,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, pass: string, requiredRole?: string) => {
     try {
-      const res = await fetch(`${API_BASE}/auth/login`, {
+      const res = await fetch(`${getApiBase()}/auth/login`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -151,7 +159,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = async () => {
     try {
-      await fetch(`${API_BASE}/auth/logout`, {
+      await fetch(`${getApiBase()}/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
@@ -175,7 +183,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const startPreview = async (targetTenantId: number) => {
     try {
-      const res = await fetch(`${API_BASE}/superadmin/preview/start`, {
+      const res = await fetch(`${getApiBase()}/superadmin/preview/start`, {
         method: "POST",
         credentials: "include",
         headers: { "Content-Type": "application/json" },
@@ -197,7 +205,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const exitPreview = async () => {
     try {
-      await fetch(`${API_BASE}/superadmin/preview/exit`, {
+      await fetch(`${getApiBase()}/superadmin/preview/exit`, {
         method: "POST",
         credentials: "include",
       });
