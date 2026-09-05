@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import { useSuperAdminStore } from "@/lib/super-admin-store";
@@ -734,15 +734,8 @@ export default function SuperAdminEnginesPage() {
                     </div>
                     <div className="flex items-center justify-between mt-1 text-[10px]">
                       <span className="text-[#64748B]">
-                        GPU Master Key: <code className="text-[#3157D5] font-bold font-mono">sk-ibrasoft-gpu-voice</code>
+                        GPU Master Key Status: <code className="text-[#3157D5] font-bold font-mono">Secured (Configured)</code>
                       </span>
-                      <button
-                        type="button"
-                        onClick={() => setApiKey("sk-ibrasoft-gpu-voice")}
-                        className="text-[#3157D5] hover:underline font-bold cursor-pointer"
-                      >
-                        Auto-Fill Key
-                      </button>
                     </div>
                   </div>
                 </div>

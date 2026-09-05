@@ -442,13 +442,13 @@ export default function SettingsPage() {
                   <label className="block font-bold text-[#0F172A] mb-1 flex items-center justify-between">
                     <span>GPU Authentication Key</span>
                     <span className="text-[11px] text-[#64748B] font-medium">
-                      Managed by Super Admin (sk-ibrasoft-gpu-voice)
+                      Managed by Super Admin
                     </span>
                   </label>
                   <div className="relative">
                     <input
                       type="password"
-                      value="sk-ibrasoft-gpu-voice"
+                      value="••••••••••••••••••••"
                       readOnly
                       disabled
                       className="w-full px-3.5 py-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl font-mono text-xs text-[#64748B] outline-none cursor-not-allowed select-none"
@@ -525,13 +525,13 @@ export default function SettingsPage() {
                   <label className="block font-bold text-[#0F172A] mb-1 flex items-center justify-between">
                     <span>GPU Authentication Key</span>
                     <span className="text-[11px] text-[#64748B] font-medium">
-                      Managed by Super Admin (sk-ibrasoft-gpu-voice)
+                      Managed by Super Admin
                     </span>
                   </label>
                   <div className="relative">
                     <input
                       type="password"
-                      value="sk-ibrasoft-gpu-voice"
+                      value="••••••••••••••••••••"
                       readOnly
                       disabled
                       className="w-full px-3.5 py-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl font-mono text-xs text-[#64748B] outline-none cursor-not-allowed select-none"
@@ -606,13 +606,13 @@ export default function SettingsPage() {
                   <label className="block font-bold text-[#0F172A] mb-1 flex items-center justify-between">
                     <span>GPU Authentication Key</span>
                     <span className="text-[11px] text-[#64748B] font-medium">
-                      Managed by Super Admin (sk-ibrasoft-gpu-voice)
+                      Managed by Super Admin
                     </span>
                   </label>
                   <div className="relative">
                     <input
                       type="password"
-                      value="sk-ibrasoft-gpu-voice"
+                      value="••••••••••••••••••••"
                       readOnly
                       disabled
                       className="w-full px-3.5 py-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl font-mono text-xs text-[#64748B] outline-none cursor-not-allowed select-none"
