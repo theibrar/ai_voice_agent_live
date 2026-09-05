@@ -13,7 +13,6 @@ rtc:
   port_range_end: 59999
   use_external_ip: true   # auto-detect Contabo public IP for ICE candidates
   enable_loopback_candidate: false
-  force_relay: false
 
 redis:
   address: 127.0.0.1:6379   # Redis runs on host network
