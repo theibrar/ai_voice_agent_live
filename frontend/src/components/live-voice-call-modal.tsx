@@ -418,18 +418,6 @@ export function LiveVoiceCallModal({
           </div>
         )}
 
-        {/* Active 3-Model GPU Microservices Stack Telemetry */}
-        <div className="px-4 py-2.5 bg-gradient-to-r from-indigo-950/40 via-sky-950/40 to-emerald-950/40 border border-[#334155] rounded-2xl flex flex-wrap items-center justify-between gap-2 text-[11px]">
-          <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="font-bold text-gray-200">Live GPU 3-Model AI Stack:</span>
-          </div>
-          <div className="flex items-center gap-2 font-mono text-[10px]">
-            <span className="bg-indigo-950/80 border border-indigo-500/30 px-2 py-0.5 rounded-lg text-indigo-300">🧠 Qwen 2.5 7B AWQ (45ms)</span>
-            <span className="bg-sky-950/80 border border-sky-500/30 px-2 py-0.5 rounded-lg text-sky-300">🔊 Kokoro-82M (45ms)</span>
-            <span className="bg-emerald-950/80 border border-emerald-500/30 px-2 py-0.5 rounded-lg text-emerald-300">🎙️ Faster-Whisper (180ms)</span>
-          </div>
-        </div>
 
         {/* Active Call State & Visualizer */}
         {isCalling ? (

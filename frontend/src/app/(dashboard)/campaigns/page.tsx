@@ -178,35 +178,6 @@ export default function CampaignsPage() {
         }
       />
 
-      {/* Active 3-Model Dedicated GPU Calling Engine Banner */}
-      <div className="p-4 bg-gradient-to-r from-[#EEF2FD] via-indigo-50/60 to-emerald-50/60 dark:from-[#0F172A] dark:via-[#1E293B] dark:to-[#0F172A] rounded-2xl border border-[#CBD5E1] dark:border-[#334155] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-3">
-          <div className="w-9 h-9 rounded-xl bg-[#3157D5] text-white flex items-center justify-center shadow-xs">
-            <TrendingUp className="w-5 h-5" />
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h4 className="font-bold text-[#0F172A] dark:text-white">Active 3-Model Dedicated GPU Calling Engine</h4>
-              <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 dark:bg-emerald-950/80 dark:text-emerald-300 rounded-full flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                Live GPU Microservices
-              </span>
-            </div>
-            <p className="text-[#64748B] dark:text-[#94A3B8] text-[11px]">Outbound dialers and automatic campaigns run exclusively through the 3 dedicated GPU microservices.</p>
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
-          <span className="px-2.5 py-1 bg-white dark:bg-[#0B0F19] border border-indigo-200 dark:border-indigo-800 rounded-lg text-indigo-700 dark:text-indigo-300 font-semibold">
-            🧠 Qwen 2.5 7B AWQ (45ms)
-          </span>
-          <span className="px-2.5 py-1 bg-white dark:bg-[#0B0F19] border border-sky-200 dark:border-sky-800 rounded-lg text-sky-700 dark:text-sky-300 font-semibold">
-            🔊 Kokoro-82M (45ms)
-          </span>
-          <span className="px-2.5 py-1 bg-white dark:bg-[#0B0F19] border border-emerald-200 dark:border-emerald-800 rounded-lg text-emerald-700 dark:text-emerald-300 font-semibold">
-            🎙️ Faster-Whisper (180ms)
-          </span>
-        </div>
-      </div>
 
       {/* Summary Matrix Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">

@@ -261,7 +261,7 @@ export async function createAppointment(apt: any) {
 
 // 11. Live WebSockets URL
 export function getVoiceWebSocketURL(): string {
-  const wsBase = API_BASE_URL.replace(/^http/, 'ws');
+  const wsBase = getApiBaseUrl().replace(/^http/, 'ws');
   return `${wsBase}/ws/calls`;
 }
 

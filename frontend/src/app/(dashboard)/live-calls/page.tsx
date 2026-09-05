@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import React, { useState } from "react";
 import Link from "next/link";
@@ -66,35 +66,6 @@ export default function LiveCallsPage() {
         }
       />
 
-      {/* 3-Model GPU Live Stack Telemetry Strip */}
-      <div className="p-3.5 bg-white dark:bg-[#0F172A] rounded-2xl border border-[#E5EAF2] dark:border-[#1E293B] card-shadow flex flex-col md:flex-row items-start md:items-center justify-between gap-3 text-xs">
-        <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-xl bg-[#3157D5]/10 text-[#3157D5] flex items-center justify-center font-bold">
-            <Radio className="w-4 h-4 text-[#3157D5] animate-pulse" />
-          </div>
-          <div>
-            <div className="font-bold text-[#172033] dark:text-white flex items-center gap-2">
-              <span>Active 3-Model GPU AI Stack</span>
-              <span className="text-[10px] px-2 py-0.5 bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 font-bold rounded-full">
-                184.144.154.180
-              </span>
-            </div>
-            <p className="text-[11px] text-[#78849A] dark:text-[#94A3B8]">Live calling routed through vLLM, Kokoro-82M, and Faster-Whisper GPU microservices</p>
-          </div>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2 font-mono text-[11px]">
-          <span className="px-2.5 py-1 bg-[#F4F7FB] dark:bg-[#1E293B] border border-indigo-200/60 dark:border-indigo-800/40 rounded-lg text-indigo-700 dark:text-indigo-300 font-medium">
-            🧠 Qwen 2.5 7B AWQ (45ms)
-          </span>
-          <span className="px-2.5 py-1 bg-[#F4F7FB] dark:bg-[#1E293B] border border-sky-200/60 dark:border-sky-800/40 rounded-lg text-sky-700 dark:text-sky-300 font-medium">
-            🔊 Kokoro-82M (45ms)
-          </span>
-          <span className="px-2.5 py-1 bg-[#F4F7FB] dark:bg-[#1E293B] border border-emerald-200/60 dark:border-emerald-800/40 rounded-lg text-emerald-700 dark:text-emerald-300 font-medium">
-            🎙️ Faster-Whisper (180ms)
-          </span>
-        </div>
-      </div>
 
       {/* Filter & Control Bar */}
       <div className="p-4 bg-white rounded-2xl border border-[#E5EAF2] card-shadow flex flex-col lg:flex-row items-center justify-between gap-3">
