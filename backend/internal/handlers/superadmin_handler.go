@@ -1,4 +1,4 @@
-﻿package handlers
+package handlers
 
 import (
 	"context"
@@ -161,7 +161,21 @@ func (h *SuperAdminHandler) ensureSchemaAndSeed() {
 		created_at TIMESTAMPTZ DEFAULT NOW()
 	);`
 	_, _ = h.db.Exec(ctx, createTrunksQuery)
-	_, _ = h.db.Exec(ctx, `ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS api_key VARCHAR(255) DEFAULT '';`)
+	_, _ = h.db.Exec(ctx, `
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT 'Default Carrier';
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS carrier VARCHAR(100) DEFAULT 'Telnyx';
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS sip_server VARCHAR(255) DEFAULT 'sip.telnyx.com';
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS port INT DEFAULT 5060;
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS transport VARCHAR(50) DEFAULT 'TLS';
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS codec_priority JSONB DEFAULT '["Opus", "G.711u", "G.711a"]'::jsonb;
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS max_channels INT DEFAULT 1000;
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS allocated_channels INT DEFAULT 0;
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS rate_per_minute_wholesale DECIMAL(6,4) DEFAULT 0.0035;
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS pop_regions JSONB DEFAULT '["US-East", "US-West", "EU", "AP"]'::jsonb;
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS is_default_carrier BOOLEAN DEFAULT false;
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS api_key VARCHAR(255) DEFAULT '';
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+	`)
 
 	// Do not seed dummy trunks - only persist real user-connected SIP trunks
 

@@ -36,11 +36,20 @@ CREATE TABLE IF NOT EXISTS users (
 -- 2. SIP & Carrier Trunks
 CREATE TABLE IF NOT EXISTS sip_trunks (
     id SERIAL PRIMARY KEY,
-    carrier_name VARCHAR(100) NOT NULL,
-    active_channels INT DEFAULT 0,
-    max_capacity INT DEFAULT 1000,
-    rate_per_min DECIMAL(6,4) DEFAULT 0.0035,
-    status VARCHAR(50) DEFAULT 'online' -- online, degraded, offline
+    name VARCHAR(255) NOT NULL,
+    carrier VARCHAR(100) NOT NULL,
+    status VARCHAR(50) DEFAULT 'online',
+    sip_server VARCHAR(255) NOT NULL,
+    port INT DEFAULT 5060,
+    transport VARCHAR(50) DEFAULT 'TLS',
+    codec_priority JSONB DEFAULT '["Opus", "G.711u", "G.711a"]'::jsonb,
+    max_channels INT DEFAULT 1000,
+    allocated_channels INT DEFAULT 0,
+    rate_per_minute_wholesale DECIMAL(6,4) DEFAULT 0.0035,
+    pop_regions JSONB DEFAULT '["US-East", "US-West", "EU", "AP"]'::jsonb,
+    is_default_carrier BOOLEAN DEFAULT false,
+    api_key VARCHAR(255) DEFAULT '',
+    created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- 3. Email & SMS Gateways (SMTP / SES / Twilio)
