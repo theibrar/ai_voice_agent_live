@@ -63,6 +63,7 @@ func main() {
 	formsHandler := handlers.NewFormsHandler(dbPool)
 	contactsHandler := handlers.NewContactsHandler(dbPool)
 	phoneNumbersHandler := handlers.NewPhoneNumbersHandler(dbPool)
+	ttsHandler := handlers.NewTTSHandler()
 
 	r := gin.Default()
 
@@ -88,6 +89,7 @@ func main() {
 	r.GET("/health", func(c *gin.Context) {
 		c.JSON(http.StatusOK, gin.H{"status": "up"})
 	})
+	r.POST("/api/tts/synthesize", ttsHandler.SynthesizeSpeech)
 
 	api := r.Group("/api/v1")
 	{
@@ -106,9 +108,10 @@ func main() {
 		api.POST("/forms/:id/submit", formsHandler.SubmitFormWebhook)
 		api.POST("/webhooks/forms/:id", formsHandler.SubmitFormWebhook)
 
-		// Telephony Engine Webhooks & Calls (AI Worker & LiveKit Gateway)
+		// Telephony & Neural Speech Synthesis
 		api.POST("/calls/start", callsHandler.StartCall)
 		api.POST("/calls/end", callsHandler.EndCall)
+		api.POST("/tts/synthesize", ttsHandler.SynthesizeSpeech)
 		api.POST("/rag/search", ragHandler.Search)
 		api.POST("/rag/query", ragHandler.Search)
 		api.POST("/appointments", appointmentsHandler.CreateAppointment)

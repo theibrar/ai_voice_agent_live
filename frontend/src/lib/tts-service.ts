@@ -34,6 +34,7 @@ export async function playKokoroNeuralAudio(
   const startTime = Date.now();
 
   const endpoints = [
+    "/api/v1/tts/synthesize",
     "/api/tts/synthesize",
     "http://77.54.200.11:15188/synthesize",
   ];
