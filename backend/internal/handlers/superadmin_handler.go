@@ -162,6 +162,8 @@ func (h *SuperAdminHandler) ensureSchemaAndSeed() {
 	);`
 	_, _ = h.db.Exec(ctx, createTrunksQuery)
 	_, _ = h.db.Exec(ctx, `
+		ALTER TABLE sip_trunks ALTER COLUMN carrier_name DROP NOT NULL;
+		ALTER TABLE sip_trunks ALTER COLUMN carrier_name SET DEFAULT '';
 		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS name VARCHAR(255) DEFAULT 'Default Carrier';
 		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS carrier VARCHAR(100) DEFAULT 'Telnyx';
 		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS sip_server VARCHAR(255) DEFAULT 'sip.telnyx.com';
