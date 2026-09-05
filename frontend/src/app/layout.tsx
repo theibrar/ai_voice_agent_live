@@ -39,6 +39,24 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en" className={`h-full antialiased ${inter.variable} ${jetbrainsMono.variable}`}>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                if (typeof window !== 'undefined') {
+                  window.addEventListener('error', function(e) {
+                    if (e && e.message && (e.message.indexOf("startTime") !== -1 || e.message.indexOf("reportAllChanges") !== -1)) {
+                      e.stopImmediatePropagation();
+                      e.preventDefault();
+                    }
+                  }, true);
+                }
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col bg-[#FFFFFF] text-[#0F172A] font-sans">
         <AuthProvider>
           <AppProvider>
