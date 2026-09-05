@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
+import { getApiBase } from "@/lib/auth-context";
 import { submitInboundWebhook } from "@/lib/api-client";
 import {
   Wrench,
@@ -162,7 +163,7 @@ export default function ToolsPage() {
   React.useEffect(() => {
     async function loadForms() {
       try {
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/forms';
+        const apiUrl = getApiBase() + '/forms';
         const res = await fetch(apiUrl);
         if (res.ok) {
           const data = await res.json();
@@ -281,14 +282,14 @@ export default function ToolsPage() {
       responsesCount: 0,
       fields: formFields,
       status: "active",
-      webhookUrl: `http://localhost:8080/api/v1/forms/${formId}/submit`,
+      webhookUrl: `${typeof window !== "undefined" ? window.location.origin : ""}${getApiBase()}/forms/${formId}/submit`,
       createdAt: new Date().toISOString().substring(0, 10),
     };
 
     setFormsList((prev) => [newFormObj, ...prev]);
 
     // Auto-generate webhook and show it inside the modal
-    setGeneratedWebhookUrl(`http://localhost:8080/api/v1/forms/${formId}/submit`);
+    setGeneratedWebhookUrl(`${typeof window !== "undefined" ? window.location.origin : ""}${getApiBase()}/forms/${formId}/submit`);
     setShowFormWebhook(true);
     setFormWebhookTestResult(null);
 
@@ -299,7 +300,7 @@ export default function ToolsPage() {
     });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/forms';
+      const apiUrl = getApiBase() + '/forms';
       await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -336,7 +337,7 @@ export default function ToolsPage() {
 
     try {
       const targetFormId = formsList[0]?.id || "form-1";
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/forms/${targetFormId}/submit`;
+      const apiUrl = getApiBase() + `/forms/${targetFormId}/submit`;
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -2006,7 +2007,7 @@ export default function ToolsPage() {
               type: "warning",
             });
             try {
-              const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/forms/${deleteModalForm.id}`;
+              const apiUrl = getApiBase() + `/forms/${deleteModalForm.id}`;
               await fetch(apiUrl, { method: "DELETE" });
             } catch (err) {
               console.warn("Failed to delete form from database:", err);

@@ -2,7 +2,7 @@
 
 import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, getApiBase } from "@/lib/auth-context";
 import { useAppStore } from "@/lib/store";
 import { AppShell } from "@/components/app-shell";
 import { PreviewBanner } from "@/components/preview-banner";
@@ -40,7 +40,7 @@ export default function DashboardLayout({
       });
 
       // Also trigger a background fetch of billing details to guarantee live sync
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1") + "/billing/details";
+      const apiUrl = getApiBase() + "/billing/details";
       fetch(apiUrl, { method: "GET", credentials: "include" })
         .then((res) => (res.ok ? res.json() : null))
         .then((data) => {

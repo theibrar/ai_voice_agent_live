@@ -1,7 +1,8 @@
-﻿"use client";
+"use client";
 
 import React, { useState, useEffect, useRef, useMemo } from "react";
 import { useSuperAdminStore } from "@/lib/super-admin-store";
+import { getApiBase } from "@/lib/auth-context";
 import {
   Server,
   Activity,
@@ -526,7 +527,7 @@ export default function SuperAdminExternalServerPage() {
   // Load recorded server logs from PostgreSQL database
   const refreshDbLogs = React.useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/inspector/logs';
+      const apiUrl = getApiBase() + '/superadmin/inspector/logs';
       const res = await fetch(apiUrl, { credentials: 'include', cache: 'no-store' });
       if (res.ok) {
         const data = await res.json();
@@ -546,7 +547,7 @@ export default function SuperAdminExternalServerPage() {
   const handleClearLogs = async () => {
     setLogs([]);
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/superadmin/inspector/logs';
+      const apiUrl = getApiBase() + '/superadmin/inspector/logs';
       await fetch(apiUrl, { method: "DELETE", credentials: "include" });
       addToast({ title: "Logs Cleared", description: "Database inspector logs cleared successfully.", type: "info" });
     } catch (err) {

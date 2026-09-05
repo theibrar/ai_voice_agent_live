@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useAppStore } from "@/lib/store";
+import { getApiBase } from "@/lib/auth-context";
 import { FlowNode } from "@/lib/types";
 import {
   Workflow,
@@ -291,7 +292,7 @@ export default function FlowBuilderPage() {
   useEffect(() => {
     async function loadFlows() {
       try {
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/flows';
+        const apiUrl = getApiBase() + '/flows';
         const res = await fetch(apiUrl, { cache: 'no-store' });
         if (res.ok) {
           const data = await res.json();
@@ -729,7 +730,7 @@ export default function FlowBuilderPage() {
     });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/flows/save';
+      const apiUrl = getApiBase() + '/flows/save';
       await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -763,7 +764,7 @@ export default function FlowBuilderPage() {
     });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/flows/${flowId}`;
+      const apiUrl = getApiBase() + `/flows/${flowId}`;
       await fetch(apiUrl, { method: "DELETE" });
     } catch (err) {
       console.warn("Failed to delete flow from backend:", err);
@@ -797,7 +798,7 @@ export default function FlowBuilderPage() {
     });
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/flows/save';
+      const apiUrl = getApiBase() + '/flows/save';
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -885,7 +886,7 @@ export default function FlowBuilderPage() {
     const nextNode = currentConn ? nodes.find((n) => n.id === currentConn.toNodeId) : null;
 
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/flows/simulate';
+      const apiUrl = getApiBase() + '/flows/simulate';
       const res = await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

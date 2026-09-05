@@ -399,7 +399,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [googleSheetsTab] = useState<string>("Leads_2026");
 
   // Webhook State
-  const [inboundWebhookUrl] = useState<string>("http://localhost:8080/api/v1/webhooks/incoming");
+  const [inboundWebhookUrl] = useState<string>(
+    typeof window !== "undefined"
+      ? `${window.location.origin}${getApiBase()}/webhooks/incoming`
+      : "http://localhost:8080/api/v1/webhooks/incoming"
+  );
   const [webhooksList, setWebhooksList] = useState<{ id: string | number; name: string; url: string; events: string[]; status: string }[]>([]);
 
   const toggleGoogleDrive = useCallback(() => {

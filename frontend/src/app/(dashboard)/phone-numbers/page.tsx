@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
+import { getApiBase } from "@/lib/auth-context";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { PhoneNumber } from "@/lib/types";
@@ -73,7 +74,7 @@ export default function PhoneNumbersPage() {
   const fetchAvailableNumbers = async (areaCode: string, numType: string) => {
     setIsSearching(true);
     try {
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"}/phone-numbers/available?country=US&area_code=${encodeURIComponent(areaCode)}&type=${numType}`;
+      const apiUrl = `${getApiBase()}/phone-numbers/available?country=US&area_code=${encodeURIComponent(areaCode)}&type=${numType}`;
       const res = await fetch(apiUrl, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();

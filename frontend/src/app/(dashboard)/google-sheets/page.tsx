@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
+import { getApiBase } from "@/lib/auth-context";
 import { PageHeader } from "@/components/page-header";
 import {
   Table,
@@ -64,7 +65,7 @@ export default function GoogleSheetsPage() {
   // Load database rows from PostgreSQL table google_sheet_rows
   const loadDatabaseRows = React.useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/integrations/google-sheets/rows';
+      const apiUrl = getApiBase() + '/integrations/google-sheets/rows';
       const res = await fetch(apiUrl);
       if (res.ok) {
         const data = await res.json();

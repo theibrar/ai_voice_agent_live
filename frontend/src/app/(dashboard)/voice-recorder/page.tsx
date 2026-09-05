@@ -2,6 +2,7 @@
 
 import React, { useState, useMemo, useRef, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
+import { getApiBase } from "@/lib/auth-context";
 import { PageHeader } from "@/components/page-header";
 import {
   Mic,
@@ -257,7 +258,7 @@ export default function VoiceRecorderPage() {
     const activeCount = activeAgents.length;
 
     try {
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1"}/calls`;
+      const apiUrl = `${getApiBase()}/calls`;
       const res = await fetch(apiUrl, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();

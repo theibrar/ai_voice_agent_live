@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useAppStore } from "@/lib/store";
+import { getApiBase } from "@/lib/auth-context";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import {
@@ -98,7 +99,7 @@ export default function CampaignsPage() {
       const selectedCamp = campaigns.find((c) => c.id === importCampaignId);
       const campName = selectedCamp ? selectedCamp.name : "General Outreach";
 
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/campaigns/import-leads';
+      const apiUrl = getApiBase() + '/campaigns/import-leads';
       await fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

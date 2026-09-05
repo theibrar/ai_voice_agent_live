@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from "react";
 import { useAppStore } from "@/lib/store";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, getApiBase } from "@/lib/auth-context";
 import { PageHeader } from "@/components/page-header";
 import {
   Coins,
@@ -63,7 +63,7 @@ export default function CreditsPage() {
 
   const fetchBillingDetails = useCallback(async () => {
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1") + "/billing/details";
+      const apiUrl = getApiBase() + "/billing/details";
       const res = await fetch(apiUrl, {
         method: "GET",
         credentials: "include",
@@ -95,7 +95,7 @@ export default function CreditsPage() {
   const handleTopUp = async () => {
     setIsProcessingTopUp(true);
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1") + "/billing/top-up";
+      const apiUrl = getApiBase() + "/billing/top-up";
       const res = await fetch(apiUrl, {
         method: "POST",
         credentials: "include",

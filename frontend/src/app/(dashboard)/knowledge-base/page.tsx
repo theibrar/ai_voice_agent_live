@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { useAppStore } from "@/lib/store";
+import { getApiBase } from "@/lib/auth-context";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { KnowledgeSource, KnowledgeSourceType } from "@/lib/types";
@@ -351,7 +352,7 @@ export default function KnowledgeBasePage() {
                               type: "info",
                             });
                             try {
-                              const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + `/knowledge/${kb.id}`;
+                              const apiUrl = getApiBase() + `/knowledge/${kb.id}`;
                               await fetch(apiUrl, {
                                 method: "PUT",
                                 headers: { "Content-Type": "application/json" },

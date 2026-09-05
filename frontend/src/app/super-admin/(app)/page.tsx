@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSuperAdminStore } from "@/lib/super-admin-store";
 import { useAppStore } from "@/lib/store";
+import { getApiBase } from "@/lib/auth-context";
 import {
   Building2,
   Users,
@@ -41,7 +42,7 @@ export default function SuperAdminMissionControl() {
     refreshTenants();
     async function loadAnalytics() {
       try {
-        const apiUrl = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api/v1') + '/analytics/daily';
+        const apiUrl = getApiBase() + '/analytics/daily';
         const res = await fetch(apiUrl, { credentials: 'include' });
         if (res.ok) {
           const data = await res.json();

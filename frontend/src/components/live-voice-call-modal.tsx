@@ -16,6 +16,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useAppStore } from "@/lib/store";
+import { getApiBase } from "@/lib/auth-context";
 import { playKokoroNeuralAudio, stopNeuralAudio } from "@/lib/tts-service";
 
 interface LiveVoiceCallModalProps {
@@ -179,7 +180,7 @@ export function LiveVoiceCallModal({
 
     // 1. Handshake with Go Backend
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1") + "/calls/start";
+      const apiUrl = getApiBase() + "/calls/start";
       await fetch(apiUrl, {
         method: "POST",
         credentials: "include",
@@ -300,7 +301,7 @@ export function LiveVoiceCallModal({
 
     // Call Go Backend EndCall to update PostgreSQL database, Appointments, Contacts, and Credits!
     try {
-      const apiUrl = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api/v1") + "/calls/end";
+      const apiUrl = getApiBase() + "/calls/end";
       const res = await fetch(apiUrl, {
         method: "POST",
         credentials: "include",
