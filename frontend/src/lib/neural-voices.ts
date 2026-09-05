@@ -1,0 +1,181 @@
+export interface NeuralVoicePersona {
+  id: string;
+  voiceName: string;
+  language: string;
+  langCode: string;
+  country: string;
+  flag: string;
+  gender: "female" | "male";
+  tone: string;
+  category: "sales" | "support" | "executive" | "healthcare" | "concierge" | "technical";
+  sampleText: string;
+  provider: "Kokoro Neural" | "NVIDIA Neural";
+}
+
+export const NEURAL_VOICE_PERSONAS: NeuralVoicePersona[] = [
+  // ==================== 🇺🇸 American English (en-US) ====================
+  {
+    id: "af_heart",
+    voiceName: "Rachel — Warm, Empathetic & Executive",
+    language: "English (US)",
+    langCode: "en-US",
+    country: "United States",
+    flag: "🇺🇸",
+    gender: "female",
+    tone: "Warm, consultative, clear executive cadence",
+    category: "sales",
+    sampleText: "Hello! Welcome to our platform. I would be thrilled to walk you through our solutions today.",
+    provider: "Kokoro Neural",
+  },
+  {
+    id: "af_bella",
+    voiceName: "Bella — High-Energy Consultative SDR",
+    language: "English (US)",
+    langCode: "en-US",
+    country: "United States",
+    flag: "🇺🇸",
+    gender: "female",
+    tone: "Dynamic, fast-paced, sales qualification",
+    category: "sales",
+    sampleText: "Hi there! I saw you were looking into expanding your commercial setup. Let's get right into it!",
+    provider: "Kokoro Neural",
+  },
+  {
+    id: "af_nicole",
+    voiceName: "Nicole — Authoritative & Professional",
+    language: "English (US)",
+    langCode: "en-US",
+    country: "United States",
+    flag: "🇺🇸",
+    gender: "female",
+    tone: "Articulate, corporate advisory, confident",
+    category: "executive",
+    sampleText: "Good morning. Let us review the compliance specifications and contract terms for your review.",
+    provider: "Kokoro Neural",
+  },
+  {
+    id: "af_sarah",
+    voiceName: "Sarah — Calm Customer Support Specialist",
+    language: "English (US)",
+    langCode: "en-US",
+    country: "United States",
+    flag: "🇺🇸",
+    gender: "female",
+    tone: "Patient, supportive, friendly problem solver",
+    category: "support",
+    sampleText: "Thanks for reaching out to support. I'm here to help get this sorted out for you right away.",
+    provider: "Kokoro Neural",
+  },
+  {
+    id: "af_sky",
+    voiceName: "Sky — Cheerful & Engaging Concierge",
+    language: "English (US)",
+    langCode: "en-US",
+    country: "United States",
+    flag: "🇺🇸",
+    gender: "female",
+    tone: "Bright, welcoming, hospitality & booking",
+    category: "concierge",
+    sampleText: "Welcome! I can assist you with your booking, appointments, or immediate inquiries today.",
+    provider: "Kokoro Neural",
+  },
+  {
+    id: "am_adam",
+    voiceName: "Marcus — Confident Enterprise Advisor",
+    language: "English (US)",
+    langCode: "en-US",
+    country: "United States",
+    flag: "🇺🇸",
+    gender: "male",
+    tone: "Deep, trustworthy, engineering & solar advisor",
+    category: "sales",
+    sampleText: "Hello, this is Marcus. I can help evaluate your commercial system and federal tax credit eligibility.",
+    provider: "Kokoro Neural",
+  },
+  {
+    id: "am_michael",
+    voiceName: "Michael — Conversational Executive",
+    language: "English (US)",
+    langCode: "en-US",
+    country: "United States",
+    flag: "🇺🇸",
+    gender: "male",
+    tone: "Smooth, approachable, leadership tone",
+    category: "executive",
+    sampleText: "Thank you for taking my call. I look forward to exploring a strategic partnership with your team.",
+    provider: "Kokoro Neural",
+  },
+  {
+    id: "am_eric",
+    voiceName: "Eric — Technical Product Specialist",
+    language: "English (US)",
+    langCode: "en-US",
+    country: "United States",
+    flag: "🇺🇸",
+    gender: "male",
+    tone: "Precise, structured, architecture & API support",
+    category: "technical",
+    sampleText: "Let us inspect your API parameters and webhook configuration to ensure optimal throughput.",
+    provider: "Kokoro Neural",
+  },
+
+  // ==================== 🇬🇧 British English (en-GB) ====================
+  {
+    id: "bf_emma",
+    voiceName: "Emma — Sophisticated British Executive",
+    language: "English (UK)",
+    langCode: "en-GB",
+    country: "United Kingdom",
+    flag: "🇬🇧",
+    gender: "female",
+    tone: "Polished, eloquent, luxury advisory",
+    category: "executive",
+    sampleText: "Good afternoon. It is an absolute pleasure to assist you with our enterprise tier services.",
+    provider: "Kokoro Neural",
+  },
+  {
+    id: "bf_isabella",
+    voiceName: "Isabella — Warm London Support",
+    language: "English (UK)",
+    langCode: "en-GB",
+    country: "United Kingdom",
+    flag: "🇬🇧",
+    gender: "female",
+    tone: "Friendly, courteous, patient British tone",
+    category: "support",
+    sampleText: "Hello there. How may I be of assistance to you today regarding your current booking?",
+    provider: "Kokoro Neural",
+  },
+  {
+    id: "bm_george",
+    voiceName: "George — Crisp British Concierge",
+    language: "English (UK)",
+    langCode: "en-GB",
+    country: "United Kingdom",
+    flag: "🇬🇧",
+    gender: "male",
+    tone: "Refined, articulate, financial advisor",
+    category: "concierge",
+    sampleText: "Good day. I have reserved your meeting slot and sent the formal invitation across to your inbox.",
+    provider: "Kokoro Neural",
+  },
+  {
+    id: "bm_lewis",
+    voiceName: "Lewis — Analytical London Consultant",
+    language: "English (UK)",
+    langCode: "en-GB",
+    country: "United Kingdom",
+    flag: "🇬🇧",
+    gender: "male",
+    tone: "Calm, intellectual, structured consulting",
+    category: "executive",
+    sampleText: "Let us examine the quarterly projections and infrastructure roadmap together.",
+    provider: "Kokoro Neural",
+  },
+];
+
+export const SUPPORTED_LANGUAGES = [
+  { label: "English (US)", value: "English (US)", flag: "US" },
+  { label: "English (UK)", value: "English (UK)", flag: "GB" },
+];
+

@@ -1,0 +1,34 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# LiveKit SIP Gateway — Production Config (Telnyx Trunk)
+# ─────────────────────────────────────────────────────────────────────────────
+
+api_key:    apexvoice-livekit-prod
+api_secret: 0293b25a21cb1c6e6f0ec2289befcc9a707f52b082f50a27225ca2970fce5f2c
+ws_url:     ws://127.0.0.1:7880
+
+sip_port: 5060
+
+# RTP port range (must NOT overlap with LiveKit's 50000-59999)
+rtp_port_range_start: 20000
+rtp_port_range_end: 29999
+
+logging:
+  level: info
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Inbound SIP Rules
+# Every inbound Telnyx SIP INVITE creates a LiveKit room and triggers
+# the Agent Worker automatically. The room name is  call-<number>-<timestamp>
+# ─────────────────────────────────────────────────────────────────────────────
+inbound_rules:
+  - name: "Telnyx Inbound — Accept All DIDs"
+    numbers:
+      - "*"     # accept calls on any DID configured in Telnyx console
+    room_prefix: "call-"
+    room_config:
+      max_participants: 2     # caller + agent only
+      empty_timeout: 600
+    # Inject metadata into participant attributes (readable by agent_worker.py)
+    attributes:
+      source: "telnyx_sip"
+

@@ -1,0 +1,104 @@
+openapi: 3.0.3
+info:
+  title: Voice Agent & RunPod API Contracts
+  version: 1.0.0
+  description: Endpoints for AI Voice Workers (RunPod) to fetch scripts, manage live calls, and update lead status.
+
+paths:
+  /api/v1/calls/start:
+    post:
+      summary: Initiate/Start a call
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lead_id]
+              properties:
+                lead_id:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Call started successfully. Returns campaign prompt.
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  call_id:
+                    type: string
+                    format: uuid
+                  lead_id:
+                    type: string
+                    format: uuid
+                  campaign_name:
+                    type: string
+                  script_template:
+                    type: string
+                  voice_prompt:
+                    type: string
+
+  /api/v1/calls/end:
+    post:
+      summary: Finalize a completed call
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [call_id, lead_id, status, transcript, duration]
+              properties:
+                call_id:
+                  type: string
+                  format: uuid
+                lead_id:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+                transcript:
+                  type: string
+                duration:
+                  type: integer
+                recording_url:
+                  type: string
+      responses:
+        '200':
+          description: Call record saved and lead updated.
+
+  /api/v1/leads/update:
+    post:
+      summary: LLM tool-call endpoint to update lead status
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [lead_id, status]
+              properties:
+                lead_id:
+                  type: string
+                  format: uuid
+                status:
+                  type: string
+      responses:
+        '200':
+          description: Lead status updated.
+
+  /api/v1/campaigns/{id}/script:
+    get:
+      summary: Get campaign script template
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Script template retrieved.

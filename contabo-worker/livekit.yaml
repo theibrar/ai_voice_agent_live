@@ -1,0 +1,40 @@
+# ─────────────────────────────────────────────────────────────────────────────
+# LiveKit SFU Server — Production Config (Contabo VPS)
+# ─────────────────────────────────────────────────────────────────────────────
+
+port: 7880
+bind_addresses:
+  - ""          # bind to all interfaces
+
+rtc:
+  tcp_port: 7881
+  # Wide UDP port range for maximum concurrent RTP media streams
+  port_range_start: 50000
+  port_range_end: 59999
+  use_external_ip: true   # auto-detect Contabo public IP for ICE candidates
+  enable_loopback_candidate: false
+  force_relay: false
+
+redis:
+  address: 127.0.0.1:6379   # Redis runs on host network
+  username: ""
+  password: ""
+  db: 0
+
+# Production API key — must match docker-compose.contabo.yml and agent_worker.py
+keys:
+  apexvoice-livekit-prod: 0293b25a21cb1c6e6f0ec2289befcc9a707f52b082f50a27225ca2970fce5f2c
+
+logging:
+  level: info
+  pion_level: error
+
+room:
+  auto_create: true
+  empty_timeout: 600        # 10-min idle room cleanup
+  max_participants: 500     # per room
+  departure_timeout: 30
+
+limit:
+  num_tracks: 2             # 1 inbound (caller) + 1 outbound (agent)
+

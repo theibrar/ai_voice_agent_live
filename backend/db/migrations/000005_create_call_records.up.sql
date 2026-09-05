@@ -1,0 +1,10 @@
+CREATE TABLE IF NOT EXISTS call_records (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    lead_id UUID REFERENCES leads(id) ON DELETE CASCADE,
+    status VARCHAR(50) NOT NULL,
+    transcript TEXT DEFAULT '',
+    duration INTEGER DEFAULT 0,
+    recording_url VARCHAR(512),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);

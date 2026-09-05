@@ -1,0 +1,25 @@
+# ─── LiveKit Real-Time WebRTC & Telephony ─────────────────────────────────────
+livekit>=0.18.2
+livekit-agents>=0.12.0
+livekit-plugins-silero>=0.7.0
+
+# ─── Async HTTP / Networking ────────────────────────────────────────────────
+aiohttp>=3.10.5
+aiohttp-retry>=2.9.1
+
+# ─── Validation & Config ───────────────────────────────────────────────────
+pydantic>=2.9.2
+python-dotenv>=1.0.1
+
+# ─── Logging ───────────────────────────────────────────────────────────────
+loguru>=0.7.2
+rich>=13.8.1
+
+# ─── System Monitoring ─────────────────────────────────────────────────────
+psutil>=6.0.0
+
+# ─── Audio DSP (WAV packing, resampling) ───────────────────────────────────
+soundfile>=0.12.1
+numpy>=1.26.4
+scipy>=1.11.4
+

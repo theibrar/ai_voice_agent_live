@@ -1,0 +1,89 @@
+# =============================================================================
+# Apex Voice AI — Contabo VPS Stack
+# Services: LiveKit SFU + LiveKit SIP + Redis + Agent Worker(s)
+# =============================================================================
+# Usage:
+#   First time : bash setup_contabo.sh
+#   Reload     : docker compose -f docker-compose.contabo.yml up -d --build
+#   Scale workers: docker compose -f docker-compose.contabo.yml up -d --scale agent-worker=4
+#   Logs       : docker compose -f docker-compose.contabo.yml logs -f agent-worker
+# =============================================================================
+
+version: "3.9"
+
+services:
+
+  # ─────────────────────────────────────────────────────────────────
+  # 1. Redis  (session state & LiveKit cluster state)
+  # ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: livekit-redis
+    restart: unless-stopped
+    network_mode: host
+    command: >
+      redis-server
+      --maxmemory 512mb
+      --maxmemory-policy allkeys-lru
+      --save ""
+      --loglevel warning
+
+  # ─────────────────────────────────────────────────────────────────
+  # 2. LiveKit SFU Server
+  # ─────────────────────────────────────────────────────────────────
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: livekit-server
+    restart: unless-stopped
+    network_mode: host
+    command: --config /etc/livekit.yaml
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro
+    depends_on:
+      - redis
+
+  # ─────────────────────────────────────────────────────────────────
+  # 3. LiveKit SIP Gateway  (Telnyx inbound/outbound telephony)
+  # ─────────────────────────────────────────────────────────────────
+  livekit-sip:
+    image: livekit/sip:latest
+    container_name: livekit-sip
+    restart: unless-stopped
+    network_mode: host
+    command: --config /etc/livekit-sip.yaml
+    volumes:
+      - ./livekit-sip.yaml:/etc/livekit-sip.yaml:ro
+    depends_on:
+      - livekit
+
+  # ─────────────────────────────────────────────────────────────────
+  # 4. LiveKit Agent Worker
+  # Scale this horizontally for maximum concurrent calls:
+  #   docker compose -f docker-compose.contabo.yml up -d --scale agent-worker=4
+  # ─────────────────────────────────────────────────────────────────
+  agent-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile.worker
+    container_name: livekit-agent-worker
+    restart: unless-stopped
+    network_mode: host
+    environment:
+      # ── LiveKit credentials (must match livekit.yaml keys section)
+      - LIVEKIT_URL=ws://127.0.0.1:7880
+      - LIVEKIT_API_KEY=apexvoice-livekit-prod
+      - LIVEKIT_API_SECRET=0293b25a21cb1c6e6f0ec2289befcc9a707f52b082f50a27225ca2970fce5f2c
+      # ── GPU AI Microservices (184.144.154.180)
+      - GPU_HOST=184.144.154.180
+      - GPU_API_KEY=sk-ibrasoft-gpu-voice
+      - STT_URL=http://184.144.154.180:56546
+      - LLM_URL=http://184.144.154.180:56137/v1
+      - TTS_URL=http://184.144.154.180:56209
+      - VAD_URL=http://184.144.154.180:56756
+      - LLM_MODEL=Qwen/Qwen2.5-7B-Instruct-AWQ
+      - DEFAULT_VOICE=af_bella
+      # ── Go Backend CRM (running on same Contabo VPS via Oracle docker-compose.yml)
+      - BACKEND_API_URL=http://127.0.0.1:8080/api/v1
+    depends_on:
+      - livekit
+
