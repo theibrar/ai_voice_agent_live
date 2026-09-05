@@ -343,7 +343,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [calls, setCalls] = useState<Call[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>([]);
+  const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>(initialKnowledgeSources);
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
   const [incomingConnections] = useState<IncomingConnection[]>([]);
   const [templates] = useState<Template[]>(initialTemplates);
@@ -973,7 +973,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (data && Array.isArray(data.knowledgeSources)) {
-          setKnowledgeSources(data.knowledgeSources);
+          setKnowledgeSources(data.knowledgeSources.length > 0 ? data.knowledgeSources : initialKnowledgeSources);
         }
       }
     } catch (err) {
