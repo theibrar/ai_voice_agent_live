@@ -38,12 +38,12 @@ from livekit.agents import JobContext, WorkerOptions, cli, AutoSubscribe
 # ─────────────────────────────────────────────────────────────────────────────
 # CONFIG  (all overridable via env vars in docker-compose.contabo.yml)
 # ─────────────────────────────────────────────────────────────────────────────
-GPU_HOST       = os.getenv("GPU_HOST",       "184.144.154.180")
+GPU_HOST       = os.getenv("GPU_HOST",       "202.215.0.218")
 GPU_API_KEY    = os.getenv("GPU_API_KEY",    "sk-ibrasoft-gpu-voice")
-STT_URL        = os.getenv("STT_URL",        f"http://{GPU_HOST}:56546")
-LLM_URL        = os.getenv("LLM_URL",        f"http://{GPU_HOST}:56137/v1")
-TTS_URL        = os.getenv("TTS_URL",        f"http://{GPU_HOST}:56209")
-VAD_URL        = os.getenv("VAD_URL",        f"http://{GPU_HOST}:56756")
+STT_URL        = os.getenv("STT_URL",        f"http://{GPU_HOST}:50053")
+LLM_URL        = os.getenv("LLM_URL",        f"http://{GPU_HOST}:50287/v1")
+TTS_URL        = os.getenv("TTS_URL",        f"http://{GPU_HOST}:50869")
+VAD_URL        = os.getenv("VAD_URL",        f"http://{GPU_HOST}:50604")
 LLM_MODEL      = os.getenv("LLM_MODEL",      "Qwen/Qwen2.5-7B-Instruct-AWQ")
 
 BACKEND_URL    = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8080/api/v1")

@@ -111,21 +111,21 @@ func (h *SuperAdminHandler) ensureSchemaAndSeed() {
 		) VALUES 
 		(
 			'eng-vllm-qwen', 'vLLM Neural LLM Engine', 'vLLM OpenAI-Compatible', 'llm',
-			'Qwen/Qwen2.5-7B-Instruct-AWQ', 'http://184.144.154.180:56137/v1', 'sk-ibrasoft-gpu-voice',
+			'Qwen/Qwen2.5-7B-Instruct-AWQ', 'http://202.215.0.218:50287/v1', 'sk-ibrasoft-gpu-voice',
 			'all', 110, '$0.10 / 1M tokens', true, true,
 			'Self-hosted private GPU cluster running vLLM OpenAI-compatible REST server with Qwen 2.5 7B Instruct AWQ.',
 			'active', NOW()
 		),
 		(
 			'eng-kokoro-tts', 'Kokoro Ultra-Fast Neural TTS', 'Kokoro-82M ONNX', 'tts',
-			'kokoro-82m', 'http://184.144.154.180:56209', 'sk-ibrasoft-gpu-voice',
+			'kokoro-v1.0', 'http://202.215.0.218:50869', 'sk-ibrasoft-gpu-voice',
 			'all', 45, '$0.005 / 1K chars', true, true,
-			'Ultra-low ~45ms latency ONNX TTS engine with 82M parameters. 24 kHz, 16-bit Mono PCM WAV.',
+			'Ultra-low ~45ms latency ONNX TTS engine with 54 multi-language voices. 24 kHz, 16-bit Mono PCM WAV.',
 			'active', NOW()
 		),
 		(
 			'eng-whisper-stt', 'Faster-Whisper CUDA Streaming Transcriber', 'Faster-Whisper CUDA', 'stt',
-			'distil-large-v3', 'http://184.144.154.180:56546', 'sk-ibrasoft-gpu-voice',
+			'distil-large-v3', 'http://202.215.0.218:50053', 'sk-ibrasoft-gpu-voice',
 			'all', 180, '$0.003 / min', true, true,
 			'Real-time distil-large-v3 model on NVIDIA CUDA (float16) with entity extraction and websocket streaming.',
 			'active', NOW()
@@ -332,10 +332,10 @@ func (h *SuperAdminHandler) ensureSchemaAndSeed() {
 			api_key, tier_requirement, latency_avg_ms, cost_per_unit, is_custom,
 			is_global_default, description, status, created_at
 		) VALUES
-		('eng-vllm-qwen', 'vLLM Neural LLM Engine', 'OpenAI-Compatible vLLM', 'llm', 'Qwen/Qwen2.5-7B-Instruct-AWQ', 'http://184.144.154.180:56137/v1', 'sk-ibrasoft-gpu-voice', 'all', 45, '$0.00 / Self-Hosted GPU', true, true, 'Production vLLM OpenAI-Compatible high-throughput inference engine running on NVIDIA RTX 4060 Ti (16GB VRAM).', 'active', NOW()),
-		('eng-tts-kokoro-gpu', 'Kokoro-82M ONNX TTS', 'Kokoro ONNX Neural', 'tts', 'kokoro-82m-onnx', 'http://184.144.154.180:56209', 'sk-ibrasoft-gpu-voice', 'all', 45, '$0.00 / Self-Hosted GPU', true, true, 'Ultra-fast neural text-to-speech with prosody & emotion tags ([cheerful], [empathy]) on NVIDIA RTX 4060 Ti.', 'active', NOW()),
-		('eng-stt-whisper-gpu', 'Faster-Whisper CUDA STT', 'Faster-Whisper CUDA', 'stt', 'distil-large-v3', 'http://184.144.154.180:56546', 'sk-ibrasoft-gpu-voice', 'all', 180, '$0.00 / Self-Hosted GPU', true, true, 'High-accuracy streaming speech-to-text powered by CUDA float16 distil-large-v3 on NVIDIA RTX 4060 Ti.', 'active', NOW()),
-		('eng-vad-silero-gpu', 'Silero VAD v5 Neural Chunk Monitor', 'Silero Neural VAD', 'stt', 'silero-vad-v5', 'http://184.144.154.180:56756', 'sk-ibrasoft-gpu-voice', 'all', 5, '$0.00 / Self-Hosted GPU', true, true, 'Sub-5ms caller interruption and barge-in voice activity detector on NVIDIA RTX 4060 Ti.', 'active', NOW())
+		('eng-vllm-qwen', 'vLLM Neural LLM Engine', 'OpenAI-Compatible vLLM', 'llm', 'Qwen/Qwen2.5-7B-Instruct-AWQ', 'http://202.215.0.218:50287/v1', 'sk-ibrasoft-gpu-voice', 'all', 45, '$0.00 / Self-Hosted GPU', true, true, 'Production vLLM OpenAI-Compatible high-throughput inference engine running on NVIDIA RTX 4060 Ti (16GB VRAM).', 'active', NOW()),
+		('eng-tts-kokoro-gpu', 'Kokoro-82M ONNX TTS', 'Kokoro ONNX Neural', 'tts', 'kokoro-v1.0', 'http://202.215.0.218:50869', 'sk-ibrasoft-gpu-voice', 'all', 45, '$0.00 / Self-Hosted GPU', true, true, 'Ultra-fast neural text-to-speech with 54 multi-language voices on NVIDIA RTX 4060 Ti.', 'active', NOW()),
+		('eng-stt-whisper-gpu', 'Faster-Whisper CUDA STT', 'Faster-Whisper CUDA', 'stt', 'distil-large-v3', 'http://202.215.0.218:50053', 'sk-ibrasoft-gpu-voice', 'all', 180, '$0.00 / Self-Hosted GPU', true, true, 'High-accuracy streaming speech-to-text powered by CUDA float16 distil-large-v3 on NVIDIA RTX 4060 Ti.', 'active', NOW()),
+		('eng-vad-silero-gpu', 'Silero VAD v5 Neural Chunk Monitor', 'Silero Neural VAD', 'stt', 'silero-vad-v5', 'http://202.215.0.218:50604', 'sk-ibrasoft-gpu-voice', 'all', 5, '$0.00 / Self-Hosted GPU', true, true, 'Sub-5ms caller interruption and barge-in voice activity detector on NVIDIA RTX 4060 Ti.', 'active', NOW())
 		ON CONFLICT (id) DO NOTHING;
 		`
 		_, _ = h.db.Exec(ctx, seedQuery)

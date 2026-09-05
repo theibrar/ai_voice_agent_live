@@ -56,13 +56,13 @@ services:
       - LIVEKIT_URL=ws://127.0.0.1:7880
       - LIVEKIT_API_KEY=apexvoice-livekit-prod
       - LIVEKIT_API_SECRET=0293b25a21cb1c6e6f0ec2289befcc9a707f52b082f50a27225ca2970fce5f2c
-      # ── GPU AI Microservices (184.144.154.180)
-      - GPU_HOST=184.144.154.180
+      # ── GPU AI Microservices (202.215.0.218)
+      - GPU_HOST=202.215.0.218
       - GPU_API_KEY=sk-ibrasoft-gpu-voice
-      - STT_URL=http://184.144.154.180:56546
-      - LLM_URL=http://184.144.154.180:56137/v1
-      - TTS_URL=http://184.144.154.180:56209
-      - VAD_URL=http://184.144.154.180:56756
+      - STT_URL=http://202.215.0.218:50053
+      - LLM_URL=http://202.215.0.218:50287/v1
+      - TTS_URL=http://202.215.0.218:50869
+      - VAD_URL=http://202.215.0.218:50604
       - LLM_MODEL=Qwen/Qwen2.5-7B-Instruct-AWQ
       - DEFAULT_VOICE=af_bella
       # ── Go Backend CRM (running on same Contabo VPS via Oracle docker-compose.yml)

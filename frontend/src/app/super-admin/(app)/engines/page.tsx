@@ -89,7 +89,7 @@ export default function SuperAdminEnginesPage() {
       category: "llm" as const,
       provider: "OpenAI-Compatible vLLM",
       modelIdentifier: "Qwen/Qwen2.5-7B-Instruct-AWQ",
-      baseUrl: "http://184.144.154.180:56137/v1",
+      baseUrl: "http://202.215.0.218:50287/v1",
       apiKey: "sk-ibrasoft-gpu-voice",
       latencyAvgMs: 45,
       costPerUnit: "$0.00 / Self-Hosted GPU",
@@ -102,13 +102,13 @@ export default function SuperAdminEnginesPage() {
       name: "Kokoro Ultra-Fast Neural TTS",
       category: "tts" as const,
       provider: "Kokoro ONNX Neural",
-      modelIdentifier: "kokoro-82m",
-      baseUrl: "http://184.144.154.180:56209",
+      modelIdentifier: "kokoro-v1.0",
+      baseUrl: "http://202.215.0.218:50869",
       apiKey: "sk-ibrasoft-gpu-voice",
       latencyAvgMs: 45,
       costPerUnit: "$0.00 / Self-Hosted GPU",
       tierRequirement: "all" as const,
-      description: "Sub-45ms ultra-fast ONNX neural voice synthesizer with 24kHz 16-bit PCM output. Supported voices: af_bella, af_sarah, am_adam, am_michael, bf_emma, bm_george.",
+      description: "Sub-45ms ultra-fast ONNX neural voice synthesizer with 54 multi-language voices. 24kHz 16-bit PCM output.",
     },
     // STT
     {
@@ -117,7 +117,7 @@ export default function SuperAdminEnginesPage() {
       category: "stt" as const,
       provider: "Faster-Whisper CUDA",
       modelIdentifier: "distil-large-v3",
-      baseUrl: "http://184.144.154.180:56546",
+      baseUrl: "http://202.215.0.218:50053",
       apiKey: "sk-ibrasoft-gpu-voice",
       latencyAvgMs: 180,
       costPerUnit: "$0.00 / Self-Hosted GPU",
@@ -131,7 +131,7 @@ export default function SuperAdminEnginesPage() {
       category: "stt" as const,
       provider: "Silero Neural VAD",
       modelIdentifier: "silero-vad-v5",
-      baseUrl: "http://184.144.154.180:56756",
+      baseUrl: "http://202.215.0.218:50604",
       apiKey: "sk-ibrasoft-gpu-voice",
       latencyAvgMs: 5,
       costPerUnit: "$0.00 / Self-Hosted GPU",
@@ -553,7 +553,7 @@ export default function SuperAdminEnginesPage() {
                   Quick Presets (1-Click Auto Configure)
                 </span>
                 <span className="text-[10px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
-                  RTX 4060 Ti • 184.144.154.180
+                  RTX 4060 Ti • 202.215.0.218
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -680,10 +680,10 @@ export default function SuperAdminEnginesPage() {
                       required
                       placeholder={
                         category === "tts"
-                          ? "http://184.144.154.180:56209"
+                          ? "http://202.215.0.218:50869"
                           : category === "stt"
-                          ? "http://184.144.154.180:56546 or http://184.144.154.180:56756"
-                          : "http://184.144.154.180:56137/v1 or http://localhost:11434/v1"
+                          ? "http://202.215.0.218:50053 or http://202.215.0.218:50604"
+                          : "http://202.215.0.218:50287/v1 or http://localhost:11434/v1"
                       }
                       value={baseUrl}
                       onChange={(e) => setBaseUrl(e.target.value)}

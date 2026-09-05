@@ -1,4 +1,4 @@
-﻿import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     const lastUserMessage = messages[messages.length - 1]?.content || "";
 
-    const vllmBaseUrl = process.env.VLLM_BASE_URL || "http://184.144.154.180:56137/v1";
+    const vllmBaseUrl = process.env.VLLM_BASE_URL || "http://202.215.0.218:50287/v1";
     const vllmApiKey = process.env.VLLM_API_KEY || "sk-ibrasoft-gpu-voice";
 
     let replyText = "";
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     let kbMatch: { title: string; score: number } | undefined = undefined;
     let resolvedModelName = "Qwen/Qwen2.5-7B-Instruct-AWQ";
 
-    // 1. Primary Engine: Live vLLM Neural LLM Engine on GPU (184.144.154.180:56137)
+    // 1. Primary Engine: Live vLLM Neural LLM Engine on GPU (202.215.0.218:50287)
     try {
       const formattedMessages = [
         {

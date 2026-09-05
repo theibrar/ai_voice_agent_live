@@ -246,7 +246,7 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
   {
     id: "gpu-vllm-models",
     method: "GET",
-    path: "http://184.144.154.180:56137/v1/models",
+    path: "http://202.215.0.218:50287/v1/models",
     name: "vLLM Neural LLM - Models Probe",
     category: "Voice AI Engine",
     description: "Verifies live connection and queries active served models on NVIDIA RTX 4060 Ti GPU.",
@@ -261,7 +261,7 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
   {
     id: "gpu-vllm-chat",
     method: "POST",
-    path: "http://184.144.154.180:56137/v1/chat/completions",
+    path: "http://202.215.0.218:50287/v1/chat/completions",
     name: "vLLM Chat Completions (Qwen 2.5 7B)",
     category: "Voice AI Engine",
     description: "High-throughput conversational turn generation from Qwen/Qwen2.5-7B-Instruct-AWQ.",
@@ -290,7 +290,7 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
   {
     id: "gpu-kokoro-health",
     method: "GET",
-    path: "http://184.144.154.180:56209/health",
+    path: "http://202.215.0.218:50869/health",
     name: "Kokoro-82M ONNX TTS Health Probe",
     category: "Voice AI Engine",
     description: "Checks Kokoro ONNX neural engine status, VRAM, and active voice features.",
@@ -305,7 +305,7 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
   {
     id: "gpu-kokoro-synth",
     method: "POST",
-    path: "http://184.144.154.180:56209/synthesize",
+    path: "http://202.215.0.218:50869/synthesize",
     name: "Kokoro-82M Neural Audio Synthesizer",
     category: "Voice AI Engine",
     description: "Synthesizes complete 24kHz 16-bit Mono WAV binary audio with prosody & emotion tags.",
@@ -331,7 +331,7 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
   {
     id: "gpu-whisper-health",
     method: "GET",
-    path: "http://184.144.154.180:56546/health",
+    path: "http://202.215.0.218:50053/health",
     name: "Faster-Whisper CUDA STT Health Probe",
     category: "Voice AI Engine",
     description: "Verifies NVIDIA CUDA float16 distil-large-v3 streaming transcriber readiness.",
@@ -346,7 +346,7 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
   {
     id: "gpu-vad-health",
     method: "GET",
-    path: "http://184.144.154.180:56756/health",
+    path: "http://202.215.0.218:50604/health",
     name: "Silero VAD v5 Neural Chunk Monitor",
     category: "Voice AI Engine",
     description: "Sub-5ms caller interruption / barge-in neural chunk monitor health status.",
@@ -361,7 +361,7 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
   {
     id: "gpu-gradio",
     method: "GET",
-    path: "http://184.144.154.180:56081/",
+    path: "http://202.215.0.218:56081/",
     name: "Gradio GPU Diagnostic Testbench",
     category: "Core & Health",
     description: "Full-stack interactive GPU diagnostic test suite running directly on RTX 4060 Ti host.",
@@ -765,7 +765,7 @@ export default function SuperAdminExternalServerPage() {
           service: "Gradio GPU Diagnostic Testbench",
           status: "online",
           hardware: "1x NVIDIA RTX 4060 Ti (16GB VRAM), AMD EPYC 7K62",
-          url: "http://184.144.154.180:56081"
+          url: "http://202.215.0.218:56081"
         };
       } else if (ep.id === "rag-search") {
         actualStatus = 200;
@@ -825,7 +825,7 @@ export default function SuperAdminExternalServerPage() {
         ? "warn"
         : "error";
 
-    const clientIp = ep.path.includes("184.144.154.180") ? "184.144.154.180" : "127.0.0.1";
+    const clientIp = ep.path.includes("202.215.0.218") ? "202.215.0.218" : "127.0.0.1";
     const rawGinLine = `[GIN-debug] ${timeFormatted} | ${actualStatus} | ${latencyText.padStart(9)} | ${clientIp.padStart(15)} | ${ep.method.padEnd(8)} "${ep.path}"`;
 
     const newLog: GinLogEntry = {
@@ -1240,7 +1240,7 @@ export default function SuperAdminExternalServerPage() {
                 GPU AI MICROSERVICES CLUSTER ONLINE
               </span>
               <span className="text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full">
-                184.144.154.180
+                202.215.0.218
               </span>
             </div>
             <h2 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
@@ -1253,7 +1253,7 @@ export default function SuperAdminExternalServerPage() {
 
           <div className="flex items-center gap-2 flex-wrap">
             <a
-              href="http://184.144.154.180:56081"
+              href="http://202.215.0.218:56081"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/30"

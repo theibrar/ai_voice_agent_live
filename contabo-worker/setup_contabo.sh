@@ -16,7 +16,7 @@ die()     { echo -e "${RED}[FAIL]  $*${NC}"; exit 1; }
 echo -e "${CYAN}"
 echo "=============================================================="
 echo "  Apex Voice AI  –  Contabo VPS LiveKit Cluster Installer"
-echo "  GPU  : 184.144.154.180  (vLLM :56137, Kokoro :56209, STT :56546, VAD :56756)"
+echo "  GPU  : 202.215.0.218  (vLLM :50287, Kokoro :50869, STT :50053, VAD :50604)"
 echo "  Stack: LiveKit SFU + SIP + Redis + Agent Worker"
 echo "=============================================================="
 echo -e "${NC}"
@@ -102,13 +102,13 @@ iptables -I INPUT 6 -m state --state NEW -p tcp --dport 7880       -j ACCEPT 2>/
 netfilter-persistent save 2>/dev/null || true
 
 # ── 5. Test GPU microservice connectivity ─────────────────────────────────
-info "5/7  Testing GPU AI service connectivity (184.144.154.180)..."
-GPU=184.144.154.180
+info "5/7  Testing GPU AI service connectivity (202.215.0.218)..."
+GPU=202.215.0.218
 for check in \
-    "vLLM LLM   :56137/v1/models" \
-    "Kokoro TTS :56209/health" \
-    "STT        :56546/health" \
-    "Silero VAD :56756/health"
+    "vLLM LLM   :50287/v1/models" \
+    "Kokoro TTS :50869/health" \
+    "STT        :50053/health" \
+    "Silero VAD :50604/health"
 do
     label=$(echo "$check" | cut -d: -f1)
     endpoint=$(echo "$check" | cut -d: -f2-)
@@ -148,7 +148,7 @@ echo "  All services are running!"
 echo ""
 echo "  LiveKit SFU     : ws://0.0.0.0:7880"
 echo "  LiveKit SIP     : sip:0.0.0.0:5060  (Telnyx inbound ready)"
-echo "  Agent Worker    : connected to GPU 184.144.154.180"
+echo "  Agent Worker    : connected to GPU 202.215.0.218"
 echo ""
 echo "  Useful commands:"
 echo "    docker compose -f docker-compose.contabo.yml logs -f agent-worker"

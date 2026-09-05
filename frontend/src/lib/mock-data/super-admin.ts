@@ -1,4 +1,4 @@
-﻿export interface SuperAdminUser {
+export interface SuperAdminUser {
   id: string;
   name: string;
   email: string;
@@ -414,7 +414,7 @@ export const initialSipCarriers: SipCarrierNetwork[] = [
     status: "online",
     isDefault: true,
     isDefaultCarrier: true,
-    sipServer: "184.144.154.180",
+    sipServer: "202.215.0.218",
     port: 5060,
     transport: "UDP",
     codecPriority: ["OPUS", "G.711u", "G.711a"],
@@ -422,12 +422,12 @@ export const initialSipCarriers: SipCarrierNetwork[] = [
     allocatedChannels: 100,
     ratePerMinuteWholesale: 0.007,
     popRegions: ["us-central-1", "global"],
-    fqdnOrIp: "184.144.154.180:5060",
+    fqdnOrIp: "202.215.0.218:5060",
     sipPort: 5060,
     activeCallsCount: 0,
     authUsername: "aivoiceebott",
     authPassword: "ai_voicee_bott@78692",
-    region: "Global / US Central (GPU 184.144.154.180)",
+    region: "Global / US Central (GPU 202.215.0.218)",
     connectionId: "3014058183544014724",
     latencyMs: 14,
     costPerMinute: 0.007,
@@ -439,7 +439,7 @@ export const initialSipCarriers: SipCarrierNetwork[] = [
     status: "online",
     isDefault: false,
     isDefaultCarrier: false,
-    sipServer: "184.144.154.180",
+    sipServer: "202.215.0.218",
     port: 7880,
     transport: "WSS/TCP",
     codecPriority: ["OPUS", "PCM"],
@@ -447,12 +447,12 @@ export const initialSipCarriers: SipCarrierNetwork[] = [
     allocatedChannels: 500,
     ratePerMinuteWholesale: 0.0,
     popRegions: ["gpu-worker-1"],
-    fqdnOrIp: "184.144.154.180:56081",
+    fqdnOrIp: "202.215.0.218:56081",
     sipPort: 7880,
     activeCallsCount: 0,
     authUsername: "devkey",
     authPassword: "secret",
-    region: "184.144.154.180 (RTX 4060 Ti)",
+    region: "202.215.0.218 (RTX 4060 Ti)",
     latencyMs: 8,
     costPerMinute: 0.0,
   },
