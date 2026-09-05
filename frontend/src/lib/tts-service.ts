@@ -34,7 +34,7 @@ export async function playKokoroNeuralAudio(
   const startTime = Date.now();
 
   const endpoints = [
-    "http://202.215.0.218:50869/synthesize",
+    "http://77.54.200.11:15188/synthesize",
     "https://server.ibrasoft.com/api/v1/tts/synthesize",
   ];
 
@@ -47,8 +47,8 @@ export async function playKokoroNeuralAudio(
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-API-Key": "sk-ibrasoft-gpu-voice",
-          "Authorization": "Bearer sk-ibrasoft-gpu-voice",
+          "X-API-Key": "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
+          "Authorization": "Bearer IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
         },
         body: JSON.stringify({
           text,

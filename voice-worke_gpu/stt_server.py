@@ -20,7 +20,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from scipy.signal import butter, filtfilt
 from loguru import logger
 
-API_KEY = os.getenv("GPU_API_KEY", "sk-ibrasoft-gpu-voice")
+API_KEY = os.getenv("GPU_API_KEY", "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF")
 MODEL_SIZE = os.getenv("STT_MODEL_SIZE", "distil-large-v3") # or large-v3-turbo
 
 app = FastAPI(title="GPU Streaming STT Engine", version="2.0.0")

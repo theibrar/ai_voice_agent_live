@@ -84,7 +84,7 @@ export default function SettingsPage() {
     }
   }, [user, tenant]);
 
-  // Dedicated GPU Microservices Stack (202.215.0.218)
+  // Dedicated GPU Microservices Stack (77.54.200.11)
   const [vllmModel, setVllmModel] = useState("Qwen/Qwen2.5-7B-Instruct-AWQ");
   const [ttsModel, setTtsModel] = useState("kokoro-82m");
   const [ttsVoice, setTtsVoice] = useState("af_bella");
@@ -385,7 +385,7 @@ export default function SettingsPage() {
                   <Cpu className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-[#0F172A]">Dedicated Live GPU Microservices Stack (202.215.0.218)</h3>
+                  <h3 className="font-bold text-[#0F172A]">Dedicated Live GPU Microservices Stack (77.54.200.11)</h3>
                   <p className="text-[#64748B] text-[11px]">Real-time pipeline: Faster-Whisper STT (distil-large-v3) → vLLM Qwen 2.5 7B Instruct AWQ → Kokoro-82M ONNX Neural TTS</p>
                 </div>
               </div>
@@ -432,7 +432,7 @@ export default function SettingsPage() {
                   <label className="block font-bold text-[#0F172A] mb-1">GPU Base URL Endpoint</label>
                   <input
                     type="text"
-                    defaultValue="http://202.215.0.218:50287/v1"
+                    defaultValue="http://77.54.200.11:15460/v1"
                     readOnly
                     className="w-full px-3 py-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl font-mono text-xs text-[#0F172A] outline-none"
                   />
@@ -494,7 +494,7 @@ export default function SettingsPage() {
                   <label className="block font-bold text-[#0F172A] mb-1">GPU Base URL Endpoint</label>
                   <input
                     type="text"
-                    defaultValue="http://202.215.0.218:50869"
+                    defaultValue="http://77.54.200.11:15188"
                     readOnly
                     className="w-full px-3 py-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl font-mono text-xs text-[#0F172A] outline-none"
                   />
@@ -577,7 +577,7 @@ export default function SettingsPage() {
                   <label className="block font-bold text-[#0F172A] mb-1">GPU Base URL Endpoint</label>
                   <input
                     type="text"
-                    defaultValue="http://202.215.0.218:50053"
+                    defaultValue="http://77.54.200.11:15490"
                     readOnly
                     className="w-full px-3 py-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl font-mono text-xs text-[#0F172A] outline-none"
                   />

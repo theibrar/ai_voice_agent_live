@@ -89,8 +89,8 @@ export default function SuperAdminEnginesPage() {
       category: "llm" as const,
       provider: "OpenAI-Compatible vLLM",
       modelIdentifier: "Qwen/Qwen2.5-7B-Instruct-AWQ",
-      baseUrl: "http://202.215.0.218:50287/v1",
-      apiKey: "sk-ibrasoft-gpu-voice",
+      baseUrl: "http://77.54.200.11:15460/v1",
+      apiKey: "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
       latencyAvgMs: 45,
       costPerUnit: "$0.00 / Self-Hosted GPU",
       tierRequirement: "all" as const,
@@ -102,13 +102,13 @@ export default function SuperAdminEnginesPage() {
       name: "Kokoro Ultra-Fast Neural TTS",
       category: "tts" as const,
       provider: "Kokoro ONNX Neural",
-      modelIdentifier: "kokoro-v1.0",
-      baseUrl: "http://202.215.0.218:50869",
-      apiKey: "sk-ibrasoft-gpu-voice",
+      modelIdentifier: "kokoro-82m",
+      baseUrl: "http://77.54.200.11:15188",
+      apiKey: "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
       latencyAvgMs: 45,
       costPerUnit: "$0.00 / Self-Hosted GPU",
       tierRequirement: "all" as const,
-      description: "Sub-45ms ultra-fast ONNX neural voice synthesizer with 54 multi-language voices. 24kHz 16-bit PCM output.",
+      description: "Sub-45ms ultra-fast ONNX neural voice synthesizer with 24kHz 16-bit PCM output. Supported voices: af_bella, af_sarah, am_adam, am_michael, bf_emma, bm_george.",
     },
     // STT
     {
@@ -117,8 +117,8 @@ export default function SuperAdminEnginesPage() {
       category: "stt" as const,
       provider: "Faster-Whisper CUDA",
       modelIdentifier: "distil-large-v3",
-      baseUrl: "http://202.215.0.218:50053",
-      apiKey: "sk-ibrasoft-gpu-voice",
+      baseUrl: "http://77.54.200.11:15490",
+      apiKey: "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
       latencyAvgMs: 180,
       costPerUnit: "$0.00 / Self-Hosted GPU",
       tierRequirement: "all" as const,
@@ -131,8 +131,8 @@ export default function SuperAdminEnginesPage() {
       category: "stt" as const,
       provider: "Silero Neural VAD",
       modelIdentifier: "silero-vad-v5",
-      baseUrl: "http://202.215.0.218:50604",
-      apiKey: "sk-ibrasoft-gpu-voice",
+      baseUrl: "http://77.54.200.11:15089",
+      apiKey: "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
       latencyAvgMs: 5,
       costPerUnit: "$0.00 / Self-Hosted GPU",
       tierRequirement: "all" as const,
@@ -189,7 +189,7 @@ export default function SuperAdminEnginesPage() {
       const t0 = performance.now();
       let probeUrl = baseUrl;
       const headers: Record<string, string> = {};
-      const key = apiKey || "sk-ibrasoft-gpu-voice";
+      const key = apiKey || "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF";
 
       if (category === "llm") {
         probeUrl = baseUrl.endsWith("/v1") ? `${baseUrl}/models` : `${baseUrl}/v1/models`;
@@ -230,7 +230,7 @@ export default function SuperAdminEnginesPage() {
     setCategory(engine.category as "llm" | "tts" | "stt");
     setModelIdentifier(engine.modelIdentifier);
     setBaseUrl(engine.baseUrl || "");
-    setApiKey(engine.apiKey || "sk-ibrasoft-gpu-voice");
+    setApiKey(engine.apiKey || "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF");
     setLatencyAvgMs(engine.latencyAvgMs);
     setCostPerUnit(engine.costPerUnit);
     setTierRequirement(engine.tierRequirement as "all" | "growth_plus" | "enterprise_only");
@@ -553,7 +553,7 @@ export default function SuperAdminEnginesPage() {
                   Quick Presets (1-Click Auto Configure)
                 </span>
                 <span className="text-[10px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
-                  RTX 4060 Ti • 202.215.0.218
+                  RTX 4060 Ti • 77.54.200.11
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -680,10 +680,10 @@ export default function SuperAdminEnginesPage() {
                       required
                       placeholder={
                         category === "tts"
-                          ? "http://202.215.0.218:50869"
+                          ? "http://77.54.200.11:15188"
                           : category === "stt"
-                          ? "http://202.215.0.218:50053 or http://202.215.0.218:50604"
-                          : "http://202.215.0.218:50287/v1 or http://localhost:11434/v1"
+                          ? "http://77.54.200.11:15490 or http://77.54.200.11:15089"
+                          : "http://77.54.200.11:15460/v1 or http://localhost:11434/v1"
                       }
                       value={baseUrl}
                       onChange={(e) => setBaseUrl(e.target.value)}
@@ -715,7 +715,7 @@ export default function SuperAdminEnginesPage() {
                     <div className="relative">
                       <input
                         type={showApiKey ? "text" : "password"}
-                        placeholder="sk-ibrasoft-gpu-voice"
+                        placeholder="IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF"
                         value={apiKey}
                         onChange={(e) => setApiKey(e.target.value)}
                         className="w-full px-3 py-2 pr-16 bg-white border border-[#E2E8F0] rounded-xl outline-none focus:border-[#3157D5] text-[#0F172A] font-mono text-xs"
@@ -723,7 +723,7 @@ export default function SuperAdminEnginesPage() {
                       <button
                         type="button"
                         onClick={() => {
-                          navigator.clipboard.writeText(apiKey || "sk-ibrasoft-gpu-voice");
+                          navigator.clipboard.writeText(apiKey || "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF");
                           addToast({ title: "Copied", description: "API Key copied to clipboard", type: "info" });
                         }}
                         className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2 py-1 text-[10px] font-bold bg-[#F8FAFC] hover:bg-[#EEF2FD] border border-[#E2E8F0] text-[#3157D5] rounded-lg transition-colors flex items-center gap-1 cursor-pointer"

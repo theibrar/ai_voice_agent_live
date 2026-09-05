@@ -15,15 +15,15 @@ export async function POST(req: NextRequest) {
 
     const lastUserMessage = messages[messages.length - 1]?.content || "";
 
-    const vllmBaseUrl = process.env.VLLM_BASE_URL || "http://202.215.0.218:50287/v1";
-    const vllmApiKey = process.env.VLLM_API_KEY || "sk-ibrasoft-gpu-voice";
+    const vllmBaseUrl = process.env.VLLM_BASE_URL || "http://77.54.200.11:15460/v1";
+    const vllmApiKey = process.env.VLLM_API_KEY || "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF";
 
     let replyText = "";
     let toolCall: { name: string; result: string } | undefined = undefined;
     let kbMatch: { title: string; score: number } | undefined = undefined;
     let resolvedModelName = "Qwen/Qwen2.5-7B-Instruct-AWQ";
 
-    // 1. Primary Engine: Live vLLM Neural LLM Engine on GPU (202.215.0.218:50287)
+    // 1. Primary Engine: Live vLLM Neural LLM Engine on GPU (77.54.200.11:15460)
     try {
       const formattedMessages = [
         {

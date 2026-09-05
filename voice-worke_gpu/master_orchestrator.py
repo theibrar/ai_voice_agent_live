@@ -15,15 +15,15 @@ import signal
 import subprocess
 from loguru import logger
 
-API_KEY = os.getenv("GPU_API_KEY", "sk-ibrasoft-gpu-voice")
+API_KEY = os.getenv("GPU_API_KEY", "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF")
 LLM_MODEL = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-7B-Instruct-AWQ")
 GPU_MEM_UTIL = os.getenv("GPU_MEM_UTIL", "0.50")
-PUBLIC_IP = os.getenv("PUBLIC_IP", "184.144.154.180")
-PORT_VLLM = os.getenv("PORT_VLLM", "56137")
-PORT_TTS = os.getenv("PORT_TTS", "56209")
-PORT_STT = os.getenv("PORT_STT", "56546")
-PORT_VAD = os.getenv("PORT_VAD", "56756")
-PORT_UI = os.getenv("PORT_UI", "56081")
+PUBLIC_IP = os.getenv("PUBLIC_IP", "77.54.200.11")
+PORT_VLLM = os.getenv("PORT_VLLM", "15460")
+PORT_TTS = os.getenv("PORT_TTS", "15188")
+PORT_STT = os.getenv("PORT_STT", "15490")
+PORT_VAD = os.getenv("PORT_VAD", "15089")
+PORT_UI = os.getenv("PORT_UI", "15238")
 
 processes = []
 

@@ -2,7 +2,7 @@
 # ==============================================================================
 # Enterprise Voice AI GPU Node - Automated One-Click Installer
 # Hardware Target: 1x NVIDIA RTX 5060 Ti (16GB VRAM) | Intel Xeon E5-2673 v4
-# Public IP: 184.144.154.180
+# Public IP: 77.54.200.11
 # Stack: Parakeet TDT 0.6B INT8 -> Qwen 4B/7B -> Kokoro-82M (+ Silero VAD v5)
 # ==============================================================================
 
@@ -21,7 +21,7 @@ echo "==========================================================================
 echo "    🎙️  ENTERPRISE GPU VOICE AI WORKER - AUTOMATED INSTALLER                  "
 echo "    Target GPU : 1x NVIDIA RTX 5060 Ti (16GB VRAM)                            "
 echo "    CPU        : Intel Xeon E5-2673 v4 (40 vCPUs, 96.5GB RAM)                 "
-echo "    Public IP  : 184.144.154.180                                              "
+echo "    Public IP  : 77.54.200.11                                                 "
 echo "    Pipeline   : Parakeet TDT 0.6B -> Qwen3-4B / Qwen2.5 -> Kokoro-82M        "
 echo "=============================================================================="
 echo -e "${NC}"
@@ -60,8 +60,8 @@ apt-get install -y --no-install-recommends \
 
 # 3. Configure Environment & API Key
 echo -e "${GREEN}[3/6] Setting Up Secure Environment...${NC}"
-DEFAULT_KEY="sk-ibrasoft-gpu-voice"
-PUBLIC_IP="184.144.154.180"
+DEFAULT_KEY="IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF"
+PUBLIC_IP="77.54.200.11"
 
 cat <<EOF > .env
 GPU_API_KEY=${DEFAULT_KEY}

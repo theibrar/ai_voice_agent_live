@@ -246,7 +246,7 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
   {
     id: "gpu-vllm-models",
     method: "GET",
-    path: "http://202.215.0.218:50287/v1/models",
+    path: "http://77.54.200.11:15460/v1/models",
     name: "vLLM Neural LLM - Models Probe",
     category: "Voice AI Engine",
     description: "Verifies live connection and queries active served models on NVIDIA RTX 4060 Ti GPU.",
@@ -255,13 +255,13 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
     successRate: 100,
     totalCalls: 430,
     lastPingTime: "Just now",
-    headers: { Authorization: "Bearer sk-ibrasoft-gpu-voice" },
+    headers: { Authorization: "Bearer IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF" },
     isDetached: false,
   },
   {
     id: "gpu-vllm-chat",
     method: "POST",
-    path: "http://202.215.0.218:50287/v1/chat/completions",
+    path: "http://77.54.200.11:15460/v1/chat/completions",
     name: "vLLM Chat Completions (Qwen 2.5 7B)",
     category: "Voice AI Engine",
     description: "High-throughput conversational turn generation from Qwen/Qwen2.5-7B-Instruct-AWQ.",
@@ -270,7 +270,7 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
     successRate: 99.8,
     totalCalls: 512,
     lastPingTime: "10s ago",
-    headers: { Authorization: "Bearer sk-ibrasoft-gpu-voice" },
+    headers: { Authorization: "Bearer IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF" },
     defaultPayload: JSON.stringify(
       {
         model: "Qwen/Qwen2.5-7B-Instruct-AWQ",
@@ -290,7 +290,7 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
   {
     id: "gpu-kokoro-health",
     method: "GET",
-    path: "http://202.215.0.218:50869/health",
+    path: "http://77.54.200.11:15188/health",
     name: "Kokoro-82M ONNX TTS Health Probe",
     category: "Voice AI Engine",
     description: "Checks Kokoro ONNX neural engine status, VRAM, and active voice features.",
@@ -299,13 +299,13 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
     successRate: 100,
     totalCalls: 480,
     lastPingTime: "15s ago",
-    headers: { "X-API-Key": "sk-ibrasoft-gpu-voice", Authorization: "Bearer sk-ibrasoft-gpu-voice" },
+    headers: { "X-API-Key": "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF", Authorization: "Bearer IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF" },
     isDetached: false,
   },
   {
     id: "gpu-kokoro-synth",
     method: "POST",
-    path: "http://202.215.0.218:50869/synthesize",
+    path: "http://77.54.200.11:15188/synthesize",
     name: "Kokoro-82M Neural Audio Synthesizer",
     category: "Voice AI Engine",
     description: "Synthesizes complete 24kHz 16-bit Mono WAV binary audio with prosody & emotion tags.",
@@ -314,7 +314,7 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
     successRate: 99.9,
     totalCalls: 620,
     lastPingTime: "25s ago",
-    headers: { "X-API-Key": "sk-ibrasoft-gpu-voice", Authorization: "Bearer sk-ibrasoft-gpu-voice" },
+    headers: { "X-API-Key": "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF", Authorization: "Bearer IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF" },
     defaultPayload: JSON.stringify(
       {
         text: "[cheerful] Hello! <break time=\"200ms\"/> Thank you for calling. How can I help you today?",
@@ -331,7 +331,7 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
   {
     id: "gpu-whisper-health",
     method: "GET",
-    path: "http://202.215.0.218:50053/health",
+    path: "http://77.54.200.11:15490/health",
     name: "Faster-Whisper CUDA STT Health Probe",
     category: "Voice AI Engine",
     description: "Verifies NVIDIA CUDA float16 distil-large-v3 streaming transcriber readiness.",
@@ -340,13 +340,13 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
     successRate: 100,
     totalCalls: 390,
     lastPingTime: "30s ago",
-    headers: { "X-API-Key": "sk-ibrasoft-gpu-voice", Authorization: "Bearer sk-ibrasoft-gpu-voice" },
+    headers: { "X-API-Key": "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF", Authorization: "Bearer IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF" },
     isDetached: false,
   },
   {
     id: "gpu-vad-health",
     method: "GET",
-    path: "http://202.215.0.218:50604/health",
+    path: "http://77.54.200.11:15089/health",
     name: "Silero VAD v5 Neural Chunk Monitor",
     category: "Voice AI Engine",
     description: "Sub-5ms caller interruption / barge-in neural chunk monitor health status.",
@@ -355,13 +355,13 @@ const INITIAL_ENDPOINTS: ApiEndpointDef[] = [
     successRate: 100,
     totalCalls: 710,
     lastPingTime: "5s ago",
-    headers: { "X-API-Key": "sk-ibrasoft-gpu-voice" },
+    headers: { "X-API-Key": "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF" },
     isDetached: false,
   },
   {
     id: "gpu-gradio",
     method: "GET",
-    path: "http://202.215.0.218:56081/",
+    path: "http://77.54.200.11:15238/",
     name: "Gradio GPU Diagnostic Testbench",
     category: "Core & Health",
     description: "Full-stack interactive GPU diagnostic test suite running directly on RTX 4060 Ti host.",
@@ -654,7 +654,7 @@ export default function SuperAdminExternalServerPage() {
       const reqHeaders: Record<string, string> = {
         "Content-Type": "application/json",
         Authorization: apiKey.startsWith("Bearer ") ? apiKey : `Bearer ${apiKey}`,
-        "X-API-Key": "sk-ibrasoft-gpu-voice",
+        "X-API-Key": "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
         ...(ep.headers || {}),
       };
 
@@ -765,7 +765,7 @@ export default function SuperAdminExternalServerPage() {
           service: "Gradio GPU Diagnostic Testbench",
           status: "online",
           hardware: "1x NVIDIA RTX 4060 Ti (16GB VRAM), AMD EPYC 7K62",
-          url: "http://202.215.0.218:56081"
+          url: "http://77.54.200.11:15238"
         };
       } else if (ep.id === "rag-search") {
         actualStatus = 200;
@@ -825,7 +825,7 @@ export default function SuperAdminExternalServerPage() {
         ? "warn"
         : "error";
 
-    const clientIp = ep.path.includes("202.215.0.218") ? "202.215.0.218" : "127.0.0.1";
+    const clientIp = ep.path.includes("77.54.200.11") ? "77.54.200.11" : "127.0.0.1";
     const rawGinLine = `[GIN-debug] ${timeFormatted} | ${actualStatus} | ${latencyText.padStart(9)} | ${clientIp.padStart(15)} | ${ep.method.padEnd(8)} "${ep.path}"`;
 
     const newLog: GinLogEntry = {
@@ -1240,7 +1240,7 @@ export default function SuperAdminExternalServerPage() {
                 GPU AI MICROSERVICES CLUSTER ONLINE
               </span>
               <span className="text-[10px] font-mono font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full">
-                202.215.0.218
+                77.54.200.11
               </span>
             </div>
             <h2 className="text-lg font-black tracking-tight text-white flex items-center gap-2">
@@ -1253,13 +1253,13 @@ export default function SuperAdminExternalServerPage() {
 
           <div className="flex items-center gap-2 flex-wrap">
             <a
-              href="http://202.215.0.218:56081"
+              href="http://77.54.200.11:15238"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-indigo-600/30"
             >
               <ExternalLink className="w-3.5 h-3.5" />
-              <span>Gradio GPU Testbench (Port 45227)</span>
+              <span>Gradio GPU Testbench (Port 15238)</span>
             </a>
             <a
               href="/llm_chat.html"

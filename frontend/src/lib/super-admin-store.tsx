@@ -1127,7 +1127,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     try {
       let probeUrl = eng.baseUrl;
       const headers: Record<string, string> = {};
-      const key = eng.apiKey || "sk-ibrasoft-gpu-voice";
+      const key = eng.apiKey || "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF";
 
       if (eng.category === "llm") {
         probeUrl = eng.baseUrl.endsWith("/v1") ? `${eng.baseUrl}/models` : `${eng.baseUrl}/v1/models`;
