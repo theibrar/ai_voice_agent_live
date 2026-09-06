@@ -64,6 +64,7 @@ func main() {
 	contactsHandler := handlers.NewContactsHandler(dbPool)
 	phoneNumbersHandler := handlers.NewPhoneNumbersHandler(dbPool)
 	ttsHandler := handlers.NewTTSHandler()
+	simulatorHandler := handlers.NewSimulatorHandler()
 
 	r := gin.Default()
 
@@ -90,9 +91,12 @@ func main() {
 		c.JSON(http.StatusOK, gin.H{"status": "up"})
 	})
 	r.POST("/api/tts/synthesize", ttsHandler.SynthesizeSpeech)
+	r.POST("/api/simulator/chat", simulatorHandler.SimulateChat)
+	r.POST("/simulator-api/chat", simulatorHandler.SimulateChat)
 
 	api := r.Group("/api/v1")
 	{
+		api.POST("/simulator/chat", simulatorHandler.SimulateChat)
 		// ==========================================
 		// 1. Public / Unauthenticated Endpoints
 		// ==========================================

@@ -168,39 +168,58 @@ export default function TestAgentPlayground() {
         }));
         historyMessages.push({ role: "user", content: text.trim() });
 
-        const res = await fetch("/api/simulator/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: historyMessages,
-            systemPrompt: agent.systemPrompt || "You are a professional voice agent. Keep answers natural and under 30 words.",
-            model: (agent as any).llmModel || "vLLM Neural LLM Engine",
-            agentName: agent.name || "Apex Voice Agent",
-            tools: agent.tools || [],
-            knowledgeBase: agent.knowledgeBaseIds || [],
-          }),
-        });
+        const endpoints = [
+          "/simulator-api/chat",
+          "/api/v1/simulator/chat",
+          "/api/simulator/chat",
+        ];
 
-        if (res.ok) {
-          const data = await res.json();
-          const replyText = data.reply || `I'm ${agent.name}. How can I help you today?`;
-          setLatency(data.latencyMs || 180);
-
-          const agentTurn: SimulatorTurn = {
-            id: `turn-${Date.now()}-agent`,
-            speaker: "agent",
-            text: replyText,
-            latencyMs: data.latencyMs || 180,
-            toolCall: data.toolCall,
-            kbMatch: data.kbMatch,
-          };
-
-          setTurns((prev) => [...prev, agentTurn]);
-          setIsThinking(false);
-          speakText(replyText);
-        } else {
-          throw new Error("Chat request failed");
+        let data: any = null;
+        for (const endpoint of endpoints) {
+          try {
+            const res = await fetch(endpoint, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                messages: historyMessages,
+                systemPrompt: agent.systemPrompt || "You are a professional voice agent. Keep answers natural and under 30 words.",
+                model: (agent as any).llmModel || "Qwen/Qwen2.5-7B-Instruct-AWQ",
+                agentName: agent.name || "Apex Voice Agent",
+                tools: agent.tools || [],
+                knowledgeBase: agent.knowledgeBaseIds || [],
+              }),
+            });
+            if (res.ok) {
+              const resData = await res.json();
+              if (resData && resData.reply) {
+                data = resData;
+                break;
+              }
+            }
+          } catch (e) {
+            console.warn(`Simulator chat attempt at ${endpoint} failed:`, e);
+          }
         }
+
+        if (!data || !data.reply) {
+          throw new Error("Chat request failed across all endpoints");
+        }
+
+        const replyText = data.reply || `I'm ${agent.name}. How can I help you today?`;
+        setLatency(data.latencyMs || 180);
+
+        const agentTurn: SimulatorTurn = {
+          id: `turn-${Date.now()}-agent`,
+          speaker: "agent",
+          text: replyText,
+          latencyMs: data.latencyMs || 180,
+          toolCall: data.toolCall,
+          kbMatch: data.kbMatch,
+        };
+
+        setTurns((prev) => [...prev, agentTurn]);
+        setIsThinking(false);
+        speakText(replyText);
       } catch (err) {
         console.warn("Live LLM simulation fallback:", err);
         const fallbackReply = `I understand your point about "${text.trim()}". As ${agent.name}, I can assist with that right away. What specific details should we cover?`;
