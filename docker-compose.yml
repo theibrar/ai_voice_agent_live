@@ -46,6 +46,7 @@ services:
       - DB_NAME=chatbot_db
       - REDIS_HOST=redis
       - REDIS_PORT=6379
+      - JWT_SECRET=apex_voice_master_jwt_secret_2026_key_9982
       - OPENAI_API_KEY=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
       - GEMINI_API_KEY=AQ.Ab8RN6JyfBrZTS8O8PnGvOTH59Aqm0F3V98uUcs9RDzbbCmlFQ
       - DEEPSEEK_API_KEY=sk-6afcb9c9ea194924b7037362f7aaa30f

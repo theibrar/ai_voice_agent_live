@@ -30,6 +30,7 @@ import { initialFlowNodes, initialFlowEdges } from "./mock-data/flow-nodes";
 import { initialABExperiments } from "./mock-data/ab-tests";
 import { initialFunnelSteps } from "./mock-data/funnel-analytics";
 import { getStoredLanguage, setStoredLanguage, BASIC_LANGUAGES } from "./languages";
+import { fetchWithAuth } from "./api-client";
 
 export const getApiBase = () => {
   if (typeof window !== "undefined") {
@@ -41,10 +42,7 @@ export const getApiBase = () => {
 };
 
 const apiFetch = (url: string, init?: RequestInit) => {
-  return fetch(url, {
-    credentials: "include",
-    ...init,
-  });
+  return fetchWithAuth(url, init);
 };
 
 export interface ToastMessage {

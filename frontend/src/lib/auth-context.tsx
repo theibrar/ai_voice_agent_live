@@ -2,6 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { fetchWithAuth } from "./api-client";
 
 export interface AuthUser {
   id: string;
@@ -74,12 +75,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // Stable ref to prevent double-run in StrictMode / repeated renders
   const authCheckedRef = useRef(false);
 
+  // Listen for unauthorized 401 events globally
+  useEffect(() => {
+    const handleUnauthorized = () => {
+      setUser(null);
+      setTenant(null);
+      setRole(null);
+      setTenantId(0);
+      setIsPreview(false);
+      setSuperAdminId(null);
+      setIsAuthenticated(false);
+    };
+    if (typeof window !== "undefined") {
+      window.addEventListener("app:unauthorized", handleUnauthorized);
+      return () => window.removeEventListener("app:unauthorized", handleUnauthorized);
+    }
+  }, []);
+
   // No dependencies — stable function reference forever
   const refreshAuth = useCallback(async () => {
     try {
-      const res = await fetch(`${getApiBase()}/auth/me`, {
+      const res = await fetchWithAuth(`${getApiBase()}/auth/me`, {
         method: "GET",
-        credentials: "include",
         headers: { "Content-Type": "application/json" },
       });
 
@@ -142,8 +159,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         };
       }
 
-      if (data.token && typeof document !== "undefined") {
-        document.cookie = `access_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+      if (data.token && typeof window !== "undefined") {
+        localStorage.setItem("access_token", data.token);
+        if (typeof document !== "undefined") {
+          document.cookie = `access_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+        }
       }
 
       await refreshAuth();
