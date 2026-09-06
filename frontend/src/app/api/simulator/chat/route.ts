@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     const lastUserMessage = messages[messages.length - 1]?.content || "";
 
-    const vllmBaseUrl = process.env.VLLM_BASE_URL || "http://77.54.200.11:15460/v1";
+    const vllmBaseUrl = process.env.VLLM_BASE_URL || "http://77.54.200.11:15219/v1";
     const vllmApiKey = process.env.VLLM_API_KEY || "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF";
 
     let replyText = "";
@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
     let kbMatch: { title: string; score: number } | undefined = undefined;
     let resolvedModelName = "Qwen/Qwen2.5-7B-Instruct-AWQ";
 
-    // 1. Primary Engine: Live vLLM Neural LLM Engine on GPU (77.54.200.11:15460)
+    // 1. Primary Engine: Live vLLM Neural LLM Engine on GPU (77.54.200.11:15219)
     try {
       const formattedMessages = [
         {

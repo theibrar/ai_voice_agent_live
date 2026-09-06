@@ -447,7 +447,7 @@ export const initialSipCarriers: SipCarrierNetwork[] = [
     allocatedChannels: 500,
     ratePerMinuteWholesale: 0.0,
     popRegions: ["gpu-worker-1"],
-    fqdnOrIp: "77.54.200.11:15238",
+    fqdnOrIp: "77.54.200.11:15044",
     sipPort: 7880,
     activeCallsCount: 0,
     authUsername: "devkey",

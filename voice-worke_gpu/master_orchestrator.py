@@ -19,11 +19,11 @@ API_KEY = os.getenv("GPU_API_KEY", "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sF
 LLM_MODEL = os.getenv("LLM_MODEL", "Qwen/Qwen2.5-7B-Instruct-AWQ")
 GPU_MEM_UTIL = os.getenv("GPU_MEM_UTIL", "0.50")
 PUBLIC_IP = os.getenv("PUBLIC_IP", "77.54.200.11")
-PORT_VLLM = os.getenv("PORT_VLLM", "15460")
-PORT_TTS = os.getenv("PORT_TTS", "15188")
-PORT_STT = os.getenv("PORT_STT", "15490")
-PORT_VAD = os.getenv("PORT_VAD", "15089")
-PORT_UI = os.getenv("PORT_UI", "15238")
+PORT_VLLM = os.getenv("PORT_VLLM", "15219")
+PORT_TTS = os.getenv("PORT_TTS", "15137")
+PORT_STT = os.getenv("PORT_STT", "15203")
+PORT_VAD = os.getenv("PORT_VAD", "15290")
+PORT_UI = os.getenv("PORT_UI", "15044")
 
 processes = []
 

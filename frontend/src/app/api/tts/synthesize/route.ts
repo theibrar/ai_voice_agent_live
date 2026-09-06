@@ -9,7 +9,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ success: false, error: "Text prompt is required" }, { status: 400 });
     }
 
-    const ttsBaseUrl = process.env.TTS_BASE_URL || "http://77.54.200.11:15188";
+    const ttsBaseUrl = process.env.TTS_BASE_URL || "http://77.54.200.11:15137";
     const gpuApiKey = process.env.GPU_API_KEY || "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF";
 
     const targetUrl = ttsBaseUrl.endsWith("/synthesize") ? ttsBaseUrl : `${ttsBaseUrl.replace(/\/+$/, "")}/synthesize`;

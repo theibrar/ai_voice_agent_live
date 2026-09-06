@@ -133,7 +133,7 @@ export default function CreateAgentPage() {
     if (!result.success) {
       addToast({
         title: "GPU Server Offline",
-        description: result.error || "Could not reach GPU server (77.54.200.11:15188). Start GPU TTS service to audition real neural audio.",
+        description: result.error || "Could not reach GPU server (77.54.200.11:15137). Start GPU TTS service to audition real neural audio.",
         type: "error",
       });
     }

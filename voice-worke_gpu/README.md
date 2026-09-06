@@ -3,11 +3,11 @@
 ### Public IP: `77.54.200.11`
 
 This repository turns your **GPU instance** into an enterprise-grade, human-realistic Voice AI cluster powering:
-1. **vLLM Engine (Port 15460)**: Qwen 2.5 7B Instruct AWQ with continuous batching, prefix caching, and OpenAI compatibility.
-2. **Kokoro-82M Streaming Neural TTS (Port 15188)**: Chunked PCM streaming (<50ms TTFA) with emotional prosody tags (`[empathy]`, `[cheerful]`, `[urgent]`).
-3. **High-Speed Streaming STT (Port 15490)**: Faster-Whisper distil-large-v3 on CUDA (float16) with PSTN denoising and speculative entity extraction.
-4. **Silero VAD Barge-In Engine (Port 15089)**: Real-time 32ms frame speech detection to cut audio when human interrupts.
-5. **Gradio Audio Testbench (Port 15238)**: Direct browser UI to test mic, prosody, and measure sub-300ms latency.
+1. **vLLM Engine (Port 15219)**: Qwen 2.5 7B Instruct AWQ with continuous batching, prefix caching, and OpenAI compatibility.
+2. **Kokoro-82M Streaming Neural TTS (Port 15137)**: Chunked PCM streaming (<50ms TTFA) with emotional prosody tags (`[empathy]`, `[cheerful]`, `[urgent]`).
+3. **High-Speed Streaming STT (Port 15203)**: Faster-Whisper distil-large-v3 on CUDA (float16) with PSTN denoising and speculative entity extraction.
+4. **Silero VAD Barge-In Engine (Port 15290)**: Real-time 32ms frame speech detection to cut audio when human interrupts.
+5. **Gradio Audio Testbench (Port 15044)**: Direct browser UI to test mic, prosody, and measure sub-300ms latency.
 
 ---
 
@@ -43,11 +43,11 @@ The script will:
 
 | Service | Mapped Port | Public Base URL |
 | :--- | :--- | :--- |
-| **Gradio Web Audio Testbench** | **`15238`** | **`http://77.54.200.11:15238`** |
-| **vLLM OpenAI-Compatible API** | **`15460`** | **`http://77.54.200.11:15460/v1`** |
-| **Kokoro Neural Streaming TTS** | **`15188`** | **`http://77.54.200.11:15188`** |
-| **Faster STT with Denoising** | **`15490`** | **`http://77.54.200.11:15490`** |
-| **Silero VAD Barge-In Engine** | **`15089`** | **`http://77.54.200.11:15089`** |
+| **Gradio Web Audio Testbench** | **`15044`** | **`http://77.54.200.11:15044`** |
+| **vLLM OpenAI-Compatible API** | **`15219`** | **`http://77.54.200.11:15219/v1`** |
+| **Kokoro Neural Streaming TTS** | **`15137`** | **`http://77.54.200.11:15137`** |
+| **Faster STT with Denoising** | **`15203`** | **`http://77.54.200.11:15203`** |
+| **Silero VAD Barge-In Engine** | **`15290`** | **`http://77.54.200.11:15290`** |
 
 ---
 
@@ -61,7 +61,7 @@ Log in to your platform dashboard at **`/super-admin/engines`**:
 * **Name**: `Qwen-2.5-7B Private GPU`
 * **Provider**: `OpenAI-Compatible vLLM`
 * **Model Identifier**: `Qwen/Qwen2.5-7B-Instruct-AWQ`
-* **Base URL**: `http://77.54.200.11:15460/v1`
+* **Base URL**: `http://77.54.200.11:15219/v1`
 * **API Key**: `IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF`
 * **Estimated Latency**: `45 ms`
 
@@ -71,7 +71,7 @@ Log in to your platform dashboard at **`/super-admin/engines`**:
 * **Name**: `Kokoro-82M Streaming GPU`
 * **Provider**: `Kokoro Neural`
 * **Model Identifier**: `kokoro-v0_19`
-* **Base URL**: `http://77.54.200.11:15188`
+* **Base URL**: `http://77.54.200.11:15137`
 * **API Key**: `IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF`
 * **Estimated Latency**: `35 ms`
 * **Supported Voices**: `af_bella`, `am_michael`, `am_adam`, `af_sarah`, `bf_emma`, `bf_isabella`, `bm_george`, `bm_lewis`
@@ -82,7 +82,7 @@ Log in to your platform dashboard at **`/super-admin/engines`**:
 * **Name**: `Fast-Whisper Denoised GPU`
 * **Provider**: `Whisper / Faster-Whisper`
 * **Model Identifier**: `distil-large-v3`
-* **Base URL**: `http://77.54.200.11:15490`
+* **Base URL**: `http://77.54.200.11:15203`
 * **API Key**: `IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF`
 * **Estimated Latency**: `180 ms`
 
@@ -92,8 +92,8 @@ Log in to your platform dashboard at **`/super-admin/engines`**:
 * **Name**: `Silero VAD v5 Neural`
 * **Provider**: `Silero VAD`
 * **Model Identifier**: `silero-v5`
-* **Base URL**: `http://77.54.200.11:15089`
-* **WebSocket URL**: `ws://77.54.200.11:15089/vad/stream`
+* **Base URL**: `http://77.54.200.11:15290`
+* **WebSocket URL**: `ws://77.54.200.11:15290/vad/stream`
 * **API Key**: `IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF`
 * **Estimated Latency**: `15 ms`
 
@@ -108,4 +108,4 @@ Log in to your platform dashboard at **`/super-admin/engines`**:
   *(Press `Ctrl+B` then `D` to detach without stopping services)*
 
 * **Test Live Mic in Browser**:
-  Open `http://77.54.200.11:15238` in your web browser to test talking into your microphone and measuring real-time turn latency!
+  Open `http://77.54.200.11:15044` in your web browser to test talking into your microphone and measuring real-time turn latency!

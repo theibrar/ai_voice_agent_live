@@ -1,6 +1,6 @@
 /**
  * Real-Time Kokoro-82M Neural Audio Synthesis Client
- * Exclusively connects to the GPU worker cluster at 77.54.200.11:15188.
+ * Exclusively connects to the GPU worker cluster at 77.54.200.11:15137.
  * Local browser speech synthesis is STRICTLY DISABLED.
  */
 
@@ -36,7 +36,7 @@ export async function playKokoroNeuralAudio(
   const endpoints = [
     "/api/v1/tts/synthesize",
     "/api/tts/synthesize",
-    "http://77.54.200.11:15188/synthesize",
+    "http://77.54.200.11:15137/synthesize",
   ];
 
   for (const endpoint of endpoints) {

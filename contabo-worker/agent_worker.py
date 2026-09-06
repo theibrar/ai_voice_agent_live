@@ -40,10 +40,10 @@ from livekit.agents import JobContext, WorkerOptions, cli, AutoSubscribe
 # ─────────────────────────────────────────────────────────────────────────────
 GPU_HOST       = os.getenv("GPU_HOST",       "77.54.200.11")
 GPU_API_KEY    = os.getenv("GPU_API_KEY",    "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF")
-STT_URL        = os.getenv("STT_URL",        f"http://{GPU_HOST}:15490")
-LLM_URL        = os.getenv("LLM_URL",        f"http://{GPU_HOST}:15460/v1")
-TTS_URL        = os.getenv("TTS_URL",        f"http://{GPU_HOST}:15188")
-VAD_URL        = os.getenv("VAD_URL",        f"http://{GPU_HOST}:15089")
+STT_URL        = os.getenv("STT_URL",        f"http://{GPU_HOST}:15203")
+LLM_URL        = os.getenv("LLM_URL",        f"http://{GPU_HOST}:15219/v1")
+TTS_URL        = os.getenv("TTS_URL",        f"http://{GPU_HOST}:15137")
+VAD_URL        = os.getenv("VAD_URL",        f"http://{GPU_HOST}:15290")
 LLM_MODEL      = os.getenv("LLM_MODEL",      "Qwen/Qwen2.5-7B-Instruct-AWQ")
 
 BACKEND_URL    = os.getenv("BACKEND_API_URL", "http://127.0.0.1:8080/api/v1")

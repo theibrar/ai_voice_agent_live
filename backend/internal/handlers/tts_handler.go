@@ -52,7 +52,7 @@ func (h *TTSHandler) SynthesizeSpeech(c *gin.Context) {
 
 	ttsBaseURL := os.Getenv("TTS_BASE_URL")
 	if ttsBaseURL == "" {
-		ttsBaseURL = "http://77.54.200.11:15188"
+		ttsBaseURL = "http://77.54.200.11:15137"
 	}
 
 	gpuAPIKey := os.Getenv("GPU_API_KEY")

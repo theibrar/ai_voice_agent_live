@@ -59,10 +59,10 @@ services:
       # ── GPU AI Microservices (77.54.200.11)
       - GPU_HOST=77.54.200.11
       - GPU_API_KEY=IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF
-      - STT_URL=http://77.54.200.11:15490
-      - LLM_URL=http://77.54.200.11:15460/v1
-      - TTS_URL=http://77.54.200.11:15188
-      - VAD_URL=http://77.54.200.11:15089
+      - STT_URL=http://77.54.200.11:15203
+      - LLM_URL=http://77.54.200.11:15219/v1
+      - TTS_URL=http://77.54.200.11:15137
+      - VAD_URL=http://77.54.200.11:15290
       - LLM_MODEL=Qwen/Qwen2.5-7B-Instruct-AWQ
       - DEFAULT_VOICE=af_bella
       # ── Go Backend CRM (running on same Contabo VPS via Oracle docker-compose.yml)

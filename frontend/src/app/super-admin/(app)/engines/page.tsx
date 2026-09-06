@@ -89,7 +89,7 @@ export default function SuperAdminEnginesPage() {
       category: "llm" as const,
       provider: "OpenAI-Compatible vLLM",
       modelIdentifier: "Qwen/Qwen2.5-7B-Instruct-AWQ",
-      baseUrl: "http://77.54.200.11:15460/v1",
+      baseUrl: "http://77.54.200.11:15219/v1",
       apiKey: "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
       latencyAvgMs: 45,
       costPerUnit: "$0.00 / Self-Hosted GPU",
@@ -103,7 +103,7 @@ export default function SuperAdminEnginesPage() {
       category: "tts" as const,
       provider: "Kokoro ONNX Neural",
       modelIdentifier: "kokoro-82m",
-      baseUrl: "http://77.54.200.11:15188",
+      baseUrl: "http://77.54.200.11:15137",
       apiKey: "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
       latencyAvgMs: 45,
       costPerUnit: "$0.00 / Self-Hosted GPU",
@@ -117,7 +117,7 @@ export default function SuperAdminEnginesPage() {
       category: "stt" as const,
       provider: "Faster-Whisper CUDA",
       modelIdentifier: "distil-large-v3",
-      baseUrl: "http://77.54.200.11:15490",
+      baseUrl: "http://77.54.200.11:15203",
       apiKey: "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
       latencyAvgMs: 180,
       costPerUnit: "$0.00 / Self-Hosted GPU",
@@ -131,7 +131,7 @@ export default function SuperAdminEnginesPage() {
       category: "stt" as const,
       provider: "Silero Neural VAD",
       modelIdentifier: "silero-vad-v5",
-      baseUrl: "http://77.54.200.11:15089",
+      baseUrl: "http://77.54.200.11:15290",
       apiKey: "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
       latencyAvgMs: 5,
       costPerUnit: "$0.00 / Self-Hosted GPU",
@@ -680,10 +680,10 @@ export default function SuperAdminEnginesPage() {
                       required
                       placeholder={
                         category === "tts"
-                          ? "http://77.54.200.11:15188"
+                          ? "http://77.54.200.11:15137"
                           : category === "stt"
-                          ? "http://77.54.200.11:15490 or http://77.54.200.11:15089"
-                          : "http://77.54.200.11:15460/v1 or http://localhost:11434/v1"
+                          ? "http://77.54.200.11:15203 or http://77.54.200.11:15290"
+                          : "http://77.54.200.11:15219/v1 or http://localhost:11434/v1"
                       }
                       value={baseUrl}
                       onChange={(e) => setBaseUrl(e.target.value)}

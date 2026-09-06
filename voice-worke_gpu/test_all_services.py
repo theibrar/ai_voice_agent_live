@@ -16,11 +16,11 @@ HOST = "77.54.200.11"
 API_KEY = "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF"
 
 PORTS = {
-    "LLM": 15460,
-    "TTS": 15188,
-    "STT": 15490,
-    "VAD": 15089,
-    "UI":  15238
+    "LLM": 15219,
+    "TTS": 15137,
+    "STT": 15203,
+    "VAD": 15290,
+    "UI":  15044
 }
 
 GREEN = "\033[92m"

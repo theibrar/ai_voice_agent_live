@@ -432,7 +432,7 @@ export default function SettingsPage() {
                   <label className="block font-bold text-[#0F172A] mb-1">GPU Base URL Endpoint</label>
                   <input
                     type="text"
-                    defaultValue="http://77.54.200.11:15460/v1"
+                    defaultValue="http://77.54.200.11:15219/v1"
                     readOnly
                     className="w-full px-3 py-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl font-mono text-xs text-[#0F172A] outline-none"
                   />
@@ -494,7 +494,7 @@ export default function SettingsPage() {
                   <label className="block font-bold text-[#0F172A] mb-1">GPU Base URL Endpoint</label>
                   <input
                     type="text"
-                    defaultValue="http://77.54.200.11:15188"
+                    defaultValue="http://77.54.200.11:15137"
                     readOnly
                     className="w-full px-3 py-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl font-mono text-xs text-[#0F172A] outline-none"
                   />
@@ -577,7 +577,7 @@ export default function SettingsPage() {
                   <label className="block font-bold text-[#0F172A] mb-1">GPU Base URL Endpoint</label>
                   <input
                     type="text"
-                    defaultValue="http://77.54.200.11:15490"
+                    defaultValue="http://77.54.200.11:15203"
                     readOnly
                     className="w-full px-3 py-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl font-mono text-xs text-[#0F172A] outline-none"
                   />

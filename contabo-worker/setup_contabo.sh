@@ -16,7 +16,7 @@ die()     { echo -e "${RED}[FAIL]  $*${NC}"; exit 1; }
 echo -e "${CYAN}"
 echo "=============================================================="
 echo "  Apex Voice AI  –  Contabo VPS LiveKit Cluster Installer"
-echo "  GPU  : 77.54.200.11  (vLLM :15460, Kokoro :15188, STT :15490, VAD :15089)"
+echo "  GPU  : 77.54.200.11  (vLLM :15219, Kokoro :15137, STT :15203, VAD :15290)"
 echo "  Stack: LiveKit SFU + SIP + Redis + Agent Worker"
 echo "=============================================================="
 echo -e "${NC}"
@@ -105,10 +105,10 @@ netfilter-persistent save 2>/dev/null || true
 info "5/7  Testing GPU AI service connectivity (77.54.200.11)..."
 GPU=77.54.200.11
 for check in \
-    "vLLM LLM   :15460/v1/models" \
-    "Kokoro TTS :15188/health" \
-    "STT        :15490/health" \
-    "Silero VAD :15089/health"
+    "vLLM LLM   :15219/v1/models" \
+    "Kokoro TTS :15137/health" \
+    "STT        :15203/health" \
+    "Silero VAD :15290/health"
 do
     label=$(echo "$check" | cut -d: -f1)
     endpoint=$(echo "$check" | cut -d: -f2-)
