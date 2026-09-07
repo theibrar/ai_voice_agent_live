@@ -51,6 +51,7 @@ export default function AppointmentsPage() {
     setGoogleAccountConnected,
     googleAccountEmail,
     setGoogleAccountEmail,
+    googleSheetsTarget,
     connectGoogleAccount,
     disconnectGoogleAccount,
     testGoogleConnection,
@@ -61,8 +62,8 @@ export default function AppointmentsPage() {
     toggleGoogleDrive,
   } = useAppStore();
 
-  // Current view date state (Default to August 2026 matching screenshot)
-  const [currentDate, setCurrentDate] = useState<Date>(new Date(2026, 7, 1)); // Month index 7 = August
+  // Current view date state
+  const [currentDate, setCurrentDate] = useState<Date>(new Date());
   const [viewMode, setViewMode] = useState<"Day" | "Week" | "Month">("Month");
 
   // Filters state
@@ -209,7 +210,7 @@ export default function AppointmentsPage() {
   };
 
   const handleToday = () => {
-    setCurrentDate(new Date(2026, 7, 1)); // Jump to current active dashboard month (August 2026)
+    setCurrentDate(new Date());
   };
 
   // 7x6 Calendar Grid Generator
