@@ -40,7 +40,7 @@ func LoadConfig() (*Config, error) {
 	viper.SetDefault("DB_SSLMODE", "disable")
 	viper.SetDefault("REDIS_HOST", "localhost")
 	viper.SetDefault("REDIS_PORT", "6379")
-	viper.SetDefault("REDIS_PASSWORD", "redispassword")
+	viper.SetDefault("REDIS_PASSWORD", "")
 	viper.SetDefault("JWT_SECRET", "default_secret_key")
 	viper.SetDefault("JWT_EXPIRATION_HOURS", 24)
 	viper.SetDefault("OPENAI_API_KEY", "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")

@@ -96,7 +96,14 @@ func (h *AuthHandler) ensureSchemaAndSeed() {
 		_, _ = h.db.Exec(ctx, idxQuery)
 	}
 
-	// 5. Seed default accounts with bcrypt hashes if missing
+	// 5. Seed default tenant 1 if missing
+	_, _ = h.db.Exec(ctx, `
+		INSERT INTO tenants (id, tenant_name, admin_name, admin_email, status, credits_balance, created_at)
+		VALUES (1, 'Apex Voice Enterprise', 'Sarah Jenkins', 'admin@apexvoice.ai', 'production', 100.00, NOW())
+		ON CONFLICT (id) DO NOTHING;
+	`)
+
+	// 6. Seed default accounts with bcrypt hashes if missing
 	var adminExists bool
 	_ = h.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE LOWER(email) = 'admin@apexvoice.ai')").Scan(&adminExists)
 	if !adminExists {

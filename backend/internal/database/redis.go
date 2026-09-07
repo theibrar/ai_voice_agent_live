@@ -17,11 +17,24 @@ func NewRedisClient(cfg *config.Config) (*redis.Client, error) {
 		DB:       0,
 	})
 
-	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
 	defer cancel()
 
 	if err := rdb.Ping(ctx).Err(); err != nil {
-		return nil, fmt.Errorf("failed to connect to Redis: %w", err)
+		// If password auth failed or rejected, try without password
+		if cfg.RedisPassword != "" {
+			rdbNoPass := redis.NewClient(&redis.Options{
+				Addr:     fmt.Sprintf("%s:%s", cfg.RedisHost, cfg.RedisPort),
+				Password: "",
+				DB:       0,
+			})
+			if pingErr := rdbNoPass.Ping(ctx).Err(); pingErr == nil {
+				log.Println("Redis connected successfully without password authentication.")
+				return rdbNoPass, nil
+			}
+		}
+		log.Printf("Warning: Redis ping failed (%v). Continuing in standalone mode.", err)
+		return rdb, nil
 	}
 
 	log.Println("Redis client connected successfully!")

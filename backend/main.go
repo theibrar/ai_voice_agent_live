@@ -34,9 +34,10 @@ func main() {
 
 	redisClient, err := database.NewRedisClient(cfg)
 	if err != nil {
-		log.Fatalf("Failed to connect to Redis: %v", err)
+		log.Printf("Warning: Failed to connect to Redis: %v. Continuing without Redis cache.", err)
+	} else if redisClient != nil {
+		defer redisClient.Close()
 	}
-	defer redisClient.Close()
 
 	wsHub := ws.NewHub()
 	go wsHub.Run()

@@ -62,17 +62,19 @@ func (s *RAGService) Search(ctx context.Context, req RAGSearchRequest) (*RAGSear
 	startTime := time.Now()
 	cacheKey := s.HashQuery(req.CampaignID.String(), req.Query)
 
-	cachedData, err := s.redisClient.Get(ctx, cacheKey).Result()
-	if err == nil && cachedData != "" {
-		var results []RAGSearchResult
-		if err := json.Unmarshal([]byte(cachedData), &results); err == nil {
-			latency := time.Since(startTime).String()
-			log.Printf("[RAG Cache HIT] Key: %s | Latency: %s", cacheKey, latency)
-			return &RAGSearchResponse{
-				Results: results,
-				Source:  "cache",
-				Latency: latency,
-			}, nil
+	if s.redisClient != nil {
+		cachedData, err := s.redisClient.Get(ctx, cacheKey).Result()
+		if err == nil && cachedData != "" {
+			var results []RAGSearchResult
+			if err := json.Unmarshal([]byte(cachedData), &results); err == nil {
+				latency := time.Since(startTime).String()
+				log.Printf("[RAG Cache HIT] Key: %s | Latency: %s", cacheKey, latency)
+				return &RAGSearchResponse{
+					Results: results,
+					Source:  "cache",
+					Latency: latency,
+				}, nil
+			}
 		}
 	}
 
@@ -104,9 +106,11 @@ func (s *RAGService) Search(ctx context.Context, req RAGSearchRequest) (*RAGSear
 		results = []RAGSearchResult{}
 	}
 
-	serialized, err := json.Marshal(results)
-	if err == nil {
-		s.redisClient.Set(ctx, cacheKey, serialized, 5*time.Minute)
+	if s.redisClient != nil {
+		serialized, err := json.Marshal(results)
+		if err == nil {
+			s.redisClient.Set(ctx, cacheKey, serialized, 5*time.Minute)
+		}
 	}
 
 	latency := time.Since(startTime).String()
