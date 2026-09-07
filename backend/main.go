@@ -122,6 +122,11 @@ func main() {
 		api.POST("/appointments", appointmentsHandler.CreateAppointment)
 		api.POST("/contacts", contactsHandler.CreateOrUpdateContact)
 		api.GET("/knowledge", knowledgeHandler.ListKnowledgeSources)
+		api.GET("/integrations/google/status", integrationsHandler.GetGoogleStatus)
+		api.POST("/integrations/google/test", integrationsHandler.TestGoogleConnection)
+		api.POST("/integrations/google/disconnect", integrationsHandler.DisconnectGoogleAccount)
+		api.GET("/integrations/google-sheets/rows", integrationsHandler.GetGoogleSheetRows)
+		api.DELETE("/integrations/google-sheets/rows", integrationsHandler.ClearGoogleSheetRows)
 
 		// Real-Time WebSocket Endpoint
 		api.GET("/ws/calls", func(c *gin.Context) {
@@ -229,11 +234,13 @@ func main() {
 			// Third-Party Integrations
 			tenantGroup.GET("/integrations", integrationsHandler.GetIntegrations)
 			tenantGroup.GET("/integrations/google/status", integrationsHandler.GetGoogleStatus)
+			tenantGroup.POST("/integrations/google/test", integrationsHandler.TestGoogleConnection)
 			tenantGroup.POST("/integrations/google/connect", integrationsHandler.ConnectGoogleAccount)
 			tenantGroup.POST("/integrations/google/disconnect", integrationsHandler.DisconnectGoogleAccount)
 			tenantGroup.POST("/integrations/google-calendar/sync", integrationsHandler.SyncGoogleCalendar)
 			tenantGroup.POST("/integrations/google-sheets/create", integrationsHandler.CreateGoogleSheet)
 			tenantGroup.GET("/integrations/google-sheets/rows", integrationsHandler.GetGoogleSheetRows)
+			tenantGroup.DELETE("/integrations/google-sheets/rows", integrationsHandler.ClearGoogleSheetRows)
 			tenantGroup.POST("/integrations/google-sheets/sync", integrationsHandler.SyncGoogleSheets)
 			tenantGroup.POST("/integrations/google-drive/sync", integrationsHandler.SyncGoogleDrive)
 			tenantGroup.POST("/integrations/email/send", integrationsHandler.SendFlowEmail)

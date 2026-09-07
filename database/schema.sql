@@ -234,7 +234,7 @@ CREATE TABLE IF NOT EXISTS integrations (
     tenant_id INT REFERENCES tenants(id) ON DELETE CASCADE,
     provider VARCHAR(100) NOT NULL UNIQUE, -- google_drive, google_sheets, zapier, make, hubspot, salesforce
     config JSONB DEFAULT '{}'::jsonb,
-    status VARCHAR(50) DEFAULT 'connected', -- connected, disconnected, degraded
+    status VARCHAR(50) DEFAULT 'disconnected', -- connected, disconnected, degraded
     last_synced_at TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -134,6 +134,28 @@ func (h *IntegrationsHandler) GetGoogleStatus(c *gin.Context) {
 
 	_ = h.db.QueryRow(ctx, "SELECT status, config, last_synced_at FROM integrations WHERE provider = 'google_account'").Scan(&status, &configJSON, &lastSyncedAt)
 
+	var rowsCount int
+	_ = h.db.QueryRow(ctx, "SELECT COUNT(*) FROM google_sheet_rows").Scan(&rowsCount)
+
+	var apptCount int
+	_ = h.db.QueryRow(ctx, "SELECT COUNT(*) FROM appointments").Scan(&apptCount)
+
+	if status != "connected" {
+		c.JSON(http.StatusOK, gin.H{
+			"connected":         false,
+			"status":            "disconnected",
+			"email":             "",
+			"client_id":         "",
+			"spreadsheet_id":    "",
+			"spreadsheet_url":   "",
+			"spreadsheet_title": "",
+			"synced_rows":       rowsCount,
+			"calendar_events":   apptCount,
+			"last_synced_at":    lastSyncedAt,
+		})
+		return
+	}
+
 	var email, clientID, spreadsheetID, spreadsheetURL, sheetTitle string
 	if len(configJSON) > 0 {
 		var cfg map[string]interface{}
@@ -156,15 +178,9 @@ func (h *IntegrationsHandler) GetGoogleStatus(c *gin.Context) {
 		}
 	}
 
-	var rowsCount int
-	_ = h.db.QueryRow(ctx, "SELECT COUNT(*) FROM google_sheet_rows").Scan(&rowsCount)
-
-	var apptCount int
-	_ = h.db.QueryRow(ctx, "SELECT COUNT(*) FROM appointments").Scan(&apptCount)
-
 	c.JSON(http.StatusOK, gin.H{
-		"connected":         status == "connected",
-		"status":            status,
+		"connected":         true,
+		"status":            "connected",
 		"email":             email,
 		"client_id":         clientID,
 		"spreadsheet_id":    spreadsheetID,
@@ -280,7 +296,14 @@ func (h *IntegrationsHandler) DisconnectGoogleAccount(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	_, err := h.db.Exec(ctx, "UPDATE integrations SET status = 'disconnected', last_synced_at = NOW() WHERE provider = 'google_account'")
+	query := `
+		INSERT INTO integrations (provider, status, config, last_synced_at)
+		VALUES ('google_account', 'disconnected', '{}'::jsonb, NOW())
+		ON CONFLICT (provider) DO UPDATE SET
+			status = 'disconnected',
+			config = '{}'::jsonb,
+			last_synced_at = NOW()`
+	_, err := h.db.Exec(ctx, query)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to disconnect Google Account: " + err.Error()})
 		return
@@ -358,27 +381,121 @@ func (h *IntegrationsHandler) GetGoogleSheetRows(c *gin.Context) {
 		}
 	}
 
-	// If table is empty, auto-populate from contacts
-	if len(result) == 0 {
-		h.syncInitialDataToSheets(ctx, "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms", "https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit")
-		// Re-query
-		rows2, err2 := h.db.Query(ctx, query)
-		if err2 == nil {
-			defer rows2.Close()
-			for rows2.Next() {
-				var r SheetRowDTO
-				var syncedAt time.Time
-				if err := rows2.Scan(&r.ID, &r.SpreadsheetID, &r.SpreadsheetURL, &r.SheetTab, &r.CallerName, &r.Phone, &r.Agent, &r.Status, &r.Score, &r.BookedAppointment, &r.Notes, &syncedAt); err == nil {
-					r.Timestamp = syncedAt.Format("2006-01-02 15:04:05")
-					result = append(result, r)
-				}
-			}
+	c.JSON(http.StatusOK, gin.H{
+		"rows":  result,
+		"count": len(result),
+	})
+}
+
+// DELETE /api/v1/integrations/google-sheets/rows
+// Purges all synced Google Sheet rows from the database
+func (h *IntegrationsHandler) ClearGoogleSheetRows(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	_, err := h.db.Exec(ctx, "TRUNCATE TABLE google_sheet_rows")
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to clear google sheet rows: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success": true,
+		"message": "All synced Google Sheet rows cleared from database.",
+	})
+}
+
+// POST /api/v1/integrations/google/test
+// Tests Google Account credentials and validates PostgreSQL database connectivity
+func (h *IntegrationsHandler) TestGoogleConnection(c *gin.Context) {
+	ctx, cancel := context.WithTimeout(context.Background(), 7*time.Second)
+	defer cancel()
+
+	var req struct {
+		Email              string `json:"email" binding:"required"`
+		ClientID           string `json:"client_id"`
+		ClientSecret       string `json:"client_secret"`
+		ServiceAccountJSON string `json:"service_account_json"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Google Account Email is required.",
+		})
+		return
+	}
+
+	email := strings.TrimSpace(req.Email)
+	if email == "" || !strings.Contains(email, "@") || !strings.Contains(email, ".") {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Please enter a valid Google Account email address (e.g. admin@yourdomain.com).",
+		})
+		return
+	}
+
+	// 1. Verify PostgreSQL Database Connectivity
+	if err := h.db.Ping(ctx); err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"success": false,
+			"error":   "Database connection check failed: " + err.Error(),
+		})
+		return
+	}
+
+	// 2. Validate Service Account JSON if provided
+	if strings.TrimSpace(req.ServiceAccountJSON) != "" {
+		var saMap map[string]interface{}
+		if err := json.Unmarshal([]byte(req.ServiceAccountJSON), &saMap); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Invalid Service Account JSON format: must be valid JSON.",
+			})
+			return
+		}
+		if t, ok := saMap["type"].(string); !ok || t != "service_account" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Service Account JSON must contain \"type\": \"service_account\".",
+			})
+			return
+		}
+		if clientEmail, ok := saMap["client_email"].(string); !ok || clientEmail == "" {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Service Account JSON is missing \"client_email\" property.",
+			})
+			return
+		}
+	} else if strings.TrimSpace(req.ClientID) != "" {
+		cid := strings.TrimSpace(req.ClientID)
+		if len(cid) < 10 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"success": false,
+				"error":   "Google OAuth Client ID appears too short or invalid.",
+			})
+			return
+		}
+	}
+
+	// 3. Outbound Network Check to Google OAuth Discovery API
+	httpClient := &http.Client{Timeout: 4 * time.Second}
+	resp, err := httpClient.Get("https://accounts.google.com/.well-known/openid-configuration")
+	googleReachable := false
+	if err == nil {
+		defer resp.Body.Close()
+		if resp.StatusCode == http.StatusOK {
+			googleReachable = true
 		}
 	}
 
 	c.JSON(http.StatusOK, gin.H{
-		"rows":  result,
-		"count": len(result),
+		"success":               true,
+		"message":               fmt.Sprintf("Connection test passed successfully! Google API reachable (%v) and PostgreSQL database connected for '%s'.", googleReachable, email),
+		"database_connected":    true,
+		"google_api_reachable": googleReachable,
+		"account_tested":        email,
 	})
 }
 

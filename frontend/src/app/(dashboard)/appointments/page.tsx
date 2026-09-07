@@ -53,6 +53,7 @@ export default function AppointmentsPage() {
     setGoogleAccountEmail,
     connectGoogleAccount,
     disconnectGoogleAccount,
+    testGoogleConnection,
     syncGoogleCalendar,
     googleDriveConnected,
     googleDriveFolder,
@@ -85,6 +86,32 @@ export default function AppointmentsPage() {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [authError, setAuthError] = useState<string | null>(null);
   const [isSyncingGoogleCalendar, setIsSyncingGoogleCalendar] = useState(false);
+  const [isTestingConnection, setIsTestingConnection] = useState(false);
+  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  const handleTestConnection = async () => {
+    setIsTestingConnection(true);
+    setTestResult(null);
+    setAuthError(null);
+    const email = googleEmailInput.trim();
+    if (!email) {
+      setAuthError("Please enter a Google Account email first.");
+      setIsTestingConnection(false);
+      return;
+    }
+    const res = await testGoogleConnection({
+      email,
+      client_id: googleClientId.trim(),
+      client_secret: googleClientSecret.trim(),
+      service_account_json: googleServiceAccountJson.trim(),
+    });
+    setIsTestingConnection(false);
+    if (res && res.success) {
+      setTestResult({ success: true, message: res.message || "Connection test passed successfully!" });
+    } else {
+      setTestResult({ success: false, message: res?.error || "Connection test failed." });
+    }
+  };
 
   const handleOpenMeet = (link?: string) => {
     let finalUrl = "https://meet.google.com/new";
@@ -1147,6 +1174,19 @@ export default function AppointmentsPage() {
               </div>
             )}
 
+            {testResult && (
+              <div
+                className={`p-3 rounded-xl text-xs font-semibold flex items-start gap-2 animate-in fade-in ${
+                  testResult.success
+                    ? "bg-emerald-50 border border-emerald-300 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300"
+                    : "bg-rose-50 border border-rose-300 text-rose-700 dark:bg-rose-950/40 dark:border-rose-800 dark:text-rose-300"
+                }`}
+              >
+                <span className="font-bold shrink-0">{testResult.success ? "✓" : "⚠️"}</span>
+                <span>{testResult.message}</span>
+              </div>
+            )}
+
             <div className="space-y-3">
               <div>
                 <label className="font-bold text-[#0F172A] block mb-1">Google Account Email <span className="text-rose-500">*</span></label>
@@ -1156,6 +1196,7 @@ export default function AppointmentsPage() {
                   onChange={(e) => {
                     setGoogleEmailInput(e.target.value);
                     if (authError) setAuthError(null);
+                    if (testResult) setTestResult(null);
                   }}
                   className="w-full px-3.5 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs font-semibold text-[#0F172A] outline-none focus:border-[#3157D5]"
                   placeholder="your-account@gmail.com"
@@ -1170,6 +1211,7 @@ export default function AppointmentsPage() {
                   onChange={(e) => {
                     setGoogleClientId(e.target.value);
                     if (authError) setAuthError(null);
+                    if (testResult) setTestResult(null);
                   }}
                   className="w-full px-3.5 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs font-mono text-[#0F172A] outline-none focus:border-[#3157D5]"
                   placeholder="981249120938-xxxx.apps.googleusercontent.com"
@@ -1184,6 +1226,7 @@ export default function AppointmentsPage() {
                   onChange={(e) => {
                     setGoogleClientSecret(e.target.value);
                     if (authError) setAuthError(null);
+                    if (testResult) setTestResult(null);
                   }}
                   className="w-full px-3.5 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs font-mono text-[#0F172A] outline-none focus:border-[#3157D5]"
                   placeholder="GOCSPX-xxxx..."
@@ -1198,6 +1241,7 @@ export default function AppointmentsPage() {
                   onChange={(e) => {
                     setGoogleServiceAccountJson(e.target.value);
                     if (authError) setAuthError(null);
+                    if (testResult) setTestResult(null);
                   }}
                   placeholder='{ "type": "service_account", "client_email": "..." }'
                   className="w-full px-3.5 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs font-mono text-[#0F172A] outline-none focus:border-[#3157D5]"
@@ -1209,16 +1253,12 @@ export default function AppointmentsPage() {
               {googleAccountConnected ? (
                 <button
                   type="button"
-                  onClick={() => {
-                    setGoogleAccountConnected(false);
-                    setGoogleAccountEmail("");
+                  onClick={async () => {
+                    await disconnectGoogleAccount();
                     setGoogleEmailInput("");
+                    setTestResult(null);
+                    setAuthError(null);
                     setAuthModalOpen(false);
-                    addToast({
-                      title: "Google Account Disconnected",
-                      description: "Google Account & Calendar sync has been disconnected.",
-                      type: "info",
-                    });
                   }}
                   className="px-4 py-2 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
                 >
@@ -1229,11 +1269,22 @@ export default function AppointmentsPage() {
               <div className="flex items-center gap-2">
                 <button
                   type="button"
+                  onClick={handleTestConnection}
+                  disabled={isTestingConnection}
+                  className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+                >
+                  <Sparkles className={`w-3.5 h-3.5 ${isTestingConnection ? "animate-spin text-emerald-600" : "text-emerald-600"}`} />
+                  <span>{isTestingConnection ? "Testing..." : "Test Connection"}</span>
+                </button>
+
+                <button
+                  type="button"
                   onClick={() => {
                     setAuthModalOpen(false);
                     setAuthError(null);
+                    setTestResult(null);
                   }}
-                  className="px-4 py-2 bg-white border border-[#E2E8F0] hover:bg-[#F8FAFC] rounded-xl text-xs font-bold text-[#0F172A] cursor-pointer"
+                  className="px-3.5 py-2 bg-white border border-[#E2E8F0] hover:bg-[#F8FAFC] rounded-xl text-xs font-bold text-[#0F172A] cursor-pointer"
                 >
                   Cancel
                 </button>

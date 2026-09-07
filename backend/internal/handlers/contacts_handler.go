@@ -43,25 +43,6 @@ func (h *ContactsHandler) ensureSchemaAndSeed() {
 		updated_at TIMESTAMPTZ DEFAULT NOW()
 	);`
 	_, _ = h.db.Exec(ctx, createTableQuery)
-
-	// Check if contacts table has records, if not seed realistic initial leads
-	var count int
-	_ = h.db.QueryRow(ctx, "SELECT COUNT(*) FROM contacts").Scan(&count)
-	if count == 0 {
-		seedQuery := `
-		INSERT INTO contacts (id, name, phone, email, company, lead_score, status, campaign_name, last_call_outcome, notes, tags, created_at, updated_at)
-		VALUES 
-		('cont-1', 'Dr. Jonathan Vance', '+1 (555) 432-8899', 'jonathan.vance@apexhealth.org', 'Apex Healthcare Systems', 95, 'qualified', 'Executive Medical Triage', 'Appointment Booked',
-		 '[Call Outcome: Appointment Booked] Handled by Elena (Customer Care). Caller requested solutions consultation. Verified contact details and locked Google Calendar slot. High purchasing intent.',
-		 '{"VIP", "High Intent", "Medical"}', NOW() - INTERVAL '2 hours', NOW() - INTERVAL '2 hours'),
-		('cont-2', 'Sarah Jenkins', '+1 (415) 890-2341', 'sarah.jenkins@lumina-cloud.io', 'Lumina Cloud Architecture', 88, 'in_progress', 'Cloud Solutions Inbound', 'Knowledge Inquiry / Price Check',
-		 '[Call Outcome: Knowledge Inquiry / Price Check] Caller inquired about SOC2 Type II compliance and Tier 3 volume discounts. AI provided SOC2 & Tier-1 pricing dossier. Caller showed interest; guided back to conversation flow.',
-		 '{"Enterprise", "SOC2 Check"}', NOW() - INTERVAL '5 hours', NOW() - INTERVAL '5 hours'),
-		('cont-3', 'Michael Scott', '+1 (555) 902-1133', 'michael.scott@dunder.com', 'Dunder Mifflin Paper Co', 60, 'no_answer', 'Outbound Sales Sprint', 'No Answer / Missed',
-		 '[Call Outcome: No Answer / Missed] Outbound call attempted by Marcus Vance. No pickup detected after 25s ring. Scheduled for automated Smart-AMD retry in 4 hours.',
-		 '{"Outbound", "Retry Scheduled"}', NOW() - INTERVAL '1 day', NOW() - INTERVAL '1 day');`
-		_, _ = h.db.Exec(ctx, seedQuery)
-	}
 }
 
 type ContactDTO struct {
@@ -265,7 +246,7 @@ func (h *ContactsHandler) DeleteContact(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
-	res, err := h.db.Exec(ctx, "DELETE FROM contacts WHERE id = $1 AND (tenant_id = $2 OR tenant_id IS NULL)", id, tenantID)
+	res, err := h.db.Exec(ctx, "DELETE FROM contacts WHERE id = $1", id)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete contact: " + err.Error()})
 		return

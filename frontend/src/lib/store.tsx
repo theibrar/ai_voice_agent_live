@@ -186,6 +186,8 @@ interface AppContextType {
   syncGoogleSheetsData: (tab?: string) => Promise<void>;
   connectGoogleAccount: (credentials: { email: string; client_id?: string; client_secret?: string; account_name?: string }) => Promise<any>;
   disconnectGoogleAccount: () => Promise<void>;
+  testGoogleConnection: (credentials: { email: string; client_id?: string; client_secret?: string; service_account_json?: string }) => Promise<any>;
+  clearGoogleSheetRows: () => Promise<void>;
   syncGoogleCalendar: () => Promise<void>;
   createGoogleSheet: (title?: string) => Promise<any>;
   refreshGoogleStatus: () => Promise<void>;
@@ -446,12 +448,48 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           setGoogleAccountEmail(data.email || "");
           setGoogleSheetsConnected(true);
           setGoogleDriveConnected(true);
+        } else {
+          setGoogleAccountConnected(false);
+          setGoogleAccountEmail("");
+          setGoogleSheetsConnected(false);
+          setGoogleDriveConnected(false);
         }
       }
     } catch (err) {
       console.warn("Could not fetch Google integration status:", err);
     }
   }, []);
+
+  const testGoogleConnection = useCallback(async (credentials: { email: string; client_id?: string; client_secret?: string; service_account_json?: string }) => {
+    try {
+      const apiUrl = getApiBase() + '/integrations/google/test';
+      const res = await apiFetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(credentials),
+      });
+      const data = await res.json();
+      return data;
+    } catch (err: any) {
+      return { success: false, error: err?.message || "Failed to reach backend API" };
+    }
+  }, []);
+
+  const clearGoogleSheetRows = useCallback(async () => {
+    try {
+      const apiUrl = getApiBase() + '/integrations/google-sheets/rows';
+      const res = await apiFetch(apiUrl, { method: "DELETE" });
+      if (res.ok) {
+        addToast({
+          title: "Google Sheet Rows Cleared",
+          description: "All synced rows removed from database.",
+          type: "info",
+        });
+      }
+    } catch (err) {
+      console.warn("Failed to clear sheet rows:", err);
+    }
+  }, [addToast]);
 
   const connectGoogleAccount = useCallback(async (credentials: { email: string; client_id?: string; client_secret?: string; account_name?: string }) => {
     try {
@@ -489,7 +527,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setGoogleDriveConnected(false);
       addToast({
         title: "Google Account Disconnected",
-        description: "Google Calendar & Sheets sync paused.",
+        description: "Google Calendar & Sheets sync disconnected from database.",
         type: "info",
       });
     } catch (err) {
@@ -1563,6 +1601,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         syncGoogleSheetsData,
         connectGoogleAccount,
         disconnectGoogleAccount,
+        testGoogleConnection,
+        clearGoogleSheetRows,
         syncGoogleCalendar,
         createGoogleSheet,
         refreshGoogleStatus,
