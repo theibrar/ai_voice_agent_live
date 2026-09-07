@@ -499,11 +499,15 @@ func (h *FlowHandler) SimulateFlowTurn(c *gin.Context) {
 				ON CONFLICT (appointment_id) DO NOTHING`
 			_, _ = h.db.Exec(ctx, aptQuery, aptID, cName, cPhone, extractedEmail, agentName, meetLink)
 
-			// Sync to Google Sheet rows
-			sheetQuery := `
-				INSERT INTO google_sheet_rows (spreadsheet_id, spreadsheet_url, sheet_tab, caller_name, phone, agent_name, outcome, score, booked_appointment, qualification_notes, raw_data, created_at, synced_at)
-				VALUES ('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms', 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit', 'Appointments_2026', $1, $2, $3, 'Confirmed Appointment', 95, 'Synced via Flow', 'Google Calendar Meet Slot Locked', jsonb_build_object('appointmentId', $4::text, 'meetingLink', $5::text), NOW(), NOW())`
-			_, _ = h.db.Exec(ctx, sheetQuery, cName, cPhone, agentName, aptID, meetLink)
+			// Sync to Google Sheet rows if Google account is connected
+			var sheetID, sheetURL string
+			_ = h.db.QueryRow(ctx, "SELECT COALESCE(config->>'spreadsheet_id', ''), COALESCE(config->>'spreadsheet_url', '') FROM integrations WHERE provider = 'google_account' AND status = 'connected'").Scan(&sheetID, &sheetURL)
+			if sheetID != "" {
+				sheetQuery := `
+					INSERT INTO google_sheet_rows (spreadsheet_id, spreadsheet_url, sheet_tab, caller_name, phone, agent_name, outcome, score, booked_appointment, qualification_notes, raw_data, created_at, synced_at)
+					VALUES ($1, $2, 'Appointments_2026', $3, $4, $5, 'Confirmed Appointment', 95, 'Synced via Flow', 'Google Calendar Meet Slot Locked', jsonb_build_object('appointmentId', $6::text, 'meetingLink', $7::text), NOW(), NOW())`
+				_, _ = h.db.Exec(ctx, sheetQuery, sheetID, sheetURL, cName, cPhone, agentName, aptID, meetLink)
+			}
 
 			bookingNote := fmt.Sprintf("[Call Outcome: Appointment Booked] Handled by %s. Inbound inquiry qualified. Confirmed Google Calendar consultation for %s with Meet link (%s). Lead Score: 95.", agentName, cName, meetLink)
 			crmQuery := `

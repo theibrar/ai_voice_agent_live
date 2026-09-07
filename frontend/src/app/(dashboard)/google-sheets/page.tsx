@@ -56,8 +56,8 @@ export default function GoogleSheetsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [isSyncing, setIsSyncing] = useState(false);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [spreadsheetUrl, setSpreadsheetUrl] = useState("https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit");
-  const [spreadsheetTitle, setSpreadsheetTitle] = useState("Apex Voice Leads & Appointments - 2026");
+  const [spreadsheetUrl, setSpreadsheetUrl] = useState(googleSheetsTarget || "");
+  const [spreadsheetTitle, setSpreadsheetTitle] = useState("Connected Google Sheet");
   const [syncedRows, setSyncedRows] = useState<Array<any>>([]);
 
   // Google Account Credentials State (Pre-filled with provided client credentials)

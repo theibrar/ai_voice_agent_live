@@ -140,7 +140,7 @@ export default function AppointmentsPage() {
 
   // Google Sheets Live Sync State
   const [sheetsSyncActive, setSheetsSyncActive] = useState(true);
-  const [sheetsSpreadsheetUrl, setSheetsSpreadsheetUrl] = useState("https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit");
+  const [sheetsSpreadsheetUrl, setSheetsSpreadsheetUrl] = useState(googleSheetsTarget || "");
   const [sheetsTabName, setSheetsTabName] = useState("Appointments_2026");
   const [isSyncingGoogleSheets, setIsSyncingGoogleSheets] = useState(false);
 

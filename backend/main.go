@@ -127,6 +127,9 @@ func main() {
 		api.POST("/integrations/google/disconnect", integrationsHandler.DisconnectGoogleAccount)
 		api.GET("/integrations/google-sheets/rows", integrationsHandler.GetGoogleSheetRows)
 		api.DELETE("/integrations/google-sheets/rows", integrationsHandler.ClearGoogleSheetRows)
+		api.GET("/phone-numbers/carrier", phoneNumbersHandler.GetCarrierConfig)
+		api.POST("/phone-numbers/carrier", phoneNumbersHandler.SaveCarrierConfig)
+		api.POST("/phone-numbers/carrier/test", phoneNumbersHandler.TestCarrierConnection)
 
 		// Real-Time WebSocket Endpoint
 		api.GET("/ws/calls", func(c *gin.Context) {
@@ -188,6 +191,9 @@ func main() {
 
 			// Telephony & Telnyx DID Phone Numbers
 			tenantGroup.GET("/phone-numbers", phoneNumbersHandler.GetTenantPhoneNumbers)
+			tenantGroup.GET("/phone-numbers/carrier", phoneNumbersHandler.GetCarrierConfig)
+			tenantGroup.POST("/phone-numbers/carrier", phoneNumbersHandler.SaveCarrierConfig)
+			tenantGroup.POST("/phone-numbers/carrier/test", phoneNumbersHandler.TestCarrierConnection)
 			tenantGroup.GET("/phone-numbers/available", phoneNumbersHandler.SearchAvailableNumbers)
 			tenantGroup.POST("/phone-numbers/provision", phoneNumbersHandler.ProvisionPhoneNumber)
 			tenantGroup.PATCH("/phone-numbers/:id/assign", phoneNumbersHandler.AssignPhoneNumber)

@@ -45,6 +45,9 @@ func (h *IntegrationsHandler) ensureSchema() {
 	);
 	`
 	_, _ = h.db.Exec(ctx, schema)
+
+	// Purge legacy mock rows
+	_, _ = h.db.Exec(ctx, "DELETE FROM google_sheet_rows WHERE caller_name IN ('Michael Scott', 'Sarah Jenkins', 'Dr. Jonathan Vance') OR caller_name LIKE '%Michael Scott%' OR spreadsheet_id = '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms'")
 }
 
 // GET /api/v1/integrations
@@ -222,7 +225,7 @@ func (h *IntegrationsHandler) ConnectGoogleAccount(c *gin.Context) {
 		clientSecret = "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"
 	}
 
-	spreadsheetID := fmt.Sprintf("1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms")
+	spreadsheetID := fmt.Sprintf("1%d_%s", time.Now().Unix(), uuid.New().String()[:12])
 	spreadsheetURL := fmt.Sprintf("https://docs.google.com/spreadsheets/d/%s/edit", spreadsheetID)
 	spreadsheetTitle := fmt.Sprintf("Apex Voice Leads & Appointments - %s", time.Now().Format("2006"))
 
@@ -265,7 +268,7 @@ func (h *IntegrationsHandler) ConnectGoogleAccount(c *gin.Context) {
 		ON CONFLICT DO NOTHING`
 	_, _ = h.db.Exec(ctx, driveQuery, spreadsheetTitle, spreadsheetURL)
 
-	// 3. Initial sync of current contacts into google_sheet_rows in database
+	// 3. Initial sync of real database contacts and appointments into google_sheet_rows in database
 	h.syncInitialDataToSheets(ctx, spreadsheetID, spreadsheetURL)
 
 	// 4. Update appointment meeting links to Google Meet
@@ -316,15 +319,46 @@ func (h *IntegrationsHandler) DisconnectGoogleAccount(c *gin.Context) {
 	})
 }
 
-// Helper to seed or sync initial CRM contacts into google_sheet_rows table in PostgreSQL
+// Helper to sync real appointments, contacts, and call records into google_sheet_rows table in PostgreSQL
 func (h *IntegrationsHandler) syncInitialDataToSheets(ctx context.Context, spreadsheetID, spreadsheetURL string) {
-	rows, err := h.db.Query(ctx, "SELECT name, phone, COALESCE(company, 'Independent'), lead_score, COALESCE(status, 'new'), COALESCE(notes, '') FROM contacts ORDER BY created_at DESC LIMIT 50")
+	// 1. Sync real appointments from database
+	aptRows, err := h.db.Query(ctx, `
+		SELECT caller_name, phone, COALESCE(agent_name, 'Rachel (Enterprise SDR)'), 'Confirmed Appointment', 95, 
+		       COALESCE(to_char(scheduled_at, 'YYYY-MM-DD HH24:MI'), 'Confirmed via Google Calendar'),
+		       COALESCE(notes, 'Google Calendar appointment slot locked.')
+		FROM appointments 
+		WHERE caller_name NOT IN ('Michael Scott', 'Sarah Jenkins', 'Dr. Jonathan Vance')
+		ORDER BY created_at DESC LIMIT 50`)
 	if err == nil {
-		defer rows.Close()
-		for rows.Next() {
-			var name, phone, company, status, notes string
+		defer aptRows.Close()
+		for aptRows.Next() {
+			var name, phone, agent, outcome, notes, booked string
 			var score int
-			if err := rows.Scan(&name, &phone, &company, &score, &status, &notes); err == nil {
+			if err := aptRows.Scan(&name, &phone, &agent, &outcome, &score, &booked, &notes); err == nil {
+				var exists bool
+				_ = h.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM google_sheet_rows WHERE caller_name = $1 AND phone = $2 AND sheet_tab = 'Appointments_2026')", name, phone).Scan(&exists)
+				if !exists {
+					insertQuery := `
+						INSERT INTO google_sheet_rows (spreadsheet_id, spreadsheet_url, sheet_tab, caller_name, phone, agent_name, outcome, score, booked_appointment, qualification_notes, synced_at)
+						VALUES ($1, $2, 'Appointments_2026', $3, $4, $5, $6, $7, $8, $9, NOW())`
+					_, _ = h.db.Exec(ctx, insertQuery, spreadsheetID, spreadsheetURL, name, phone, agent, outcome, score, booked, notes)
+				}
+			}
+		}
+	}
+
+	// 2. Sync real contacts from CRM
+	crmRows, err := h.db.Query(ctx, `
+		SELECT name, phone, COALESCE(campaign_name, 'Inbound Direct'), lead_score, COALESCE(status, 'new'), COALESCE(notes, '') 
+		FROM contacts 
+		WHERE name NOT IN ('Michael Scott', 'Sarah Jenkins', 'Dr. Jonathan Vance')
+		ORDER BY created_at DESC LIMIT 50`)
+	if err == nil {
+		defer crmRows.Close()
+		for crmRows.Next() {
+			var name, phone, campaign, status, notes string
+			var score int
+			if err := crmRows.Scan(&name, &phone, &campaign, &score, &status, &notes); err == nil {
 				outcome := "New Lead"
 				if status == "qualified" {
 					outcome = "Qualified"
@@ -332,10 +366,14 @@ func (h *IntegrationsHandler) syncInitialDataToSheets(ctx context.Context, sprea
 					outcome = "Appointment Booked"
 				}
 
-				insertQuery := `
-					INSERT INTO google_sheet_rows (spreadsheet_id, spreadsheet_url, sheet_tab, caller_name, phone, agent_name, outcome, score, booked_appointment, qualification_notes, synced_at)
-					VALUES ($1, $2, 'Leads_2026', $3, $4, 'Marcus (Solar Advisor)', $5, $6, 'Confirmed via Google Calendar', $7, NOW())`
-				_, _ = h.db.Exec(ctx, insertQuery, spreadsheetID, spreadsheetURL, name, phone, outcome, score, notes)
+				var exists bool
+				_ = h.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM google_sheet_rows WHERE caller_name = $1 AND phone = $2 AND sheet_tab = 'Leads_2026')", name, phone).Scan(&exists)
+				if !exists {
+					insertQuery := `
+						INSERT INTO google_sheet_rows (spreadsheet_id, spreadsheet_url, sheet_tab, caller_name, phone, agent_name, outcome, score, booked_appointment, qualification_notes, synced_at)
+						VALUES ($1, $2, 'Leads_2026', $3, $4, 'Rachel (Enterprise SDR)', $5, $6, 'Pending Slot', $7, NOW())`
+					_, _ = h.db.Exec(ctx, insertQuery, spreadsheetID, spreadsheetURL, name, phone, outcome, score, notes)
+				}
 			}
 		}
 	}
@@ -520,7 +558,7 @@ func (h *IntegrationsHandler) CreateGoogleSheet(c *gin.Context) {
 		tab = "Leads_2026"
 	}
 
-	spreadsheetID := fmt.Sprintf("1%d%s", time.Now().Unix(), "BxiMVs0XRA5n")
+	spreadsheetID := fmt.Sprintf("1%d_%s", time.Now().Unix(), uuid.New().String()[:12])
 	spreadsheetURL := fmt.Sprintf("https://docs.google.com/spreadsheets/d/%s/edit", spreadsheetID)
 
 	// Save to google_drive_files
@@ -562,7 +600,10 @@ func (h *IntegrationsHandler) SyncGoogleSheets(c *gin.Context) {
 	}
 	sID := req.SpreadsheetID
 	if sID == "" {
-		sID = "1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms"
+		_ = h.db.QueryRow(ctx, "SELECT config->>'spreadsheet_id' FROM integrations WHERE provider = 'google_account'").Scan(&sID)
+	}
+	if sID == "" {
+		sID = fmt.Sprintf("1%d_%s", time.Now().Unix(), uuid.New().String()[:12])
 	}
 	sURL := fmt.Sprintf("https://docs.google.com/spreadsheets/d/%s/edit", sID)
 

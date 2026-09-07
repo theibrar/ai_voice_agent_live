@@ -220,6 +220,25 @@ export default function LoginPage() {
               )}
             </button>
           </form>
+
+          {/* Quick Demo Fill Helper */}
+          <div className="mt-4 p-3 bg-white border border-[#E5EAF2] rounded-xl text-xs flex items-center justify-between shadow-2xs">
+            <div>
+              <p className="font-semibold text-[#172033]">Default Admin Credentials</p>
+              <p className="text-[#78849A] text-[11px] font-mono">admin@apexvoice.ai • Admin@123</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setValue("email", "admin@apexvoice.ai");
+                setValue("password", "Admin@123");
+                setAuthError(null);
+              }}
+              className="px-2.5 py-1 bg-[#EEF2FD] hover:bg-[#3157D5]/10 text-[#3157D5] font-semibold text-xs rounded-lg transition-colors cursor-pointer"
+            >
+              Autofill
+            </button>
+          </div>
         </div>
 
         {/* Footer */}

@@ -246,12 +246,16 @@ func (h *CallsHandler) EndCall(c *gin.Context) {
 			ON CONFLICT (appointment_id) DO NOTHING`
 		_, _ = h.dbPool.Exec(ctx, aptQuery, aptID, req.TenantID, callerName, req.CallerNumber, req.AgentName, notes)
 
-		// Append to Google Sheets ledger table
-		sheetQuery := `
-			INSERT INTO google_sheet_rows (spreadsheet_id, spreadsheet_url, sheet_tab, caller_name, phone, agent_name, outcome, score, booked_appointment, qualification_notes, raw_data, created_at, synced_at)
-			VALUES ('1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms', 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit', 'Leads_2026', $1, $2, $3, $4, 85, 'Confirmed 30min Demo', $5, $6, NOW(), NOW())`
-		rawPayload, _ := json.Marshal(req)
-		_, _ = h.dbPool.Exec(ctx, sheetQuery, callerName, req.CallerNumber, req.AgentName, outcome, notes, string(rawPayload))
+		// Append to Google Sheets ledger table if Google account is connected
+		var sheetID, sheetURL string
+		_ = h.dbPool.QueryRow(ctx, "SELECT COALESCE(config->>'spreadsheet_id', ''), COALESCE(config->>'spreadsheet_url', '') FROM integrations WHERE provider = 'google_account' AND status = 'connected'").Scan(&sheetID, &sheetURL)
+		if sheetID != "" {
+			sheetQuery := `
+				INSERT INTO google_sheet_rows (spreadsheet_id, spreadsheet_url, sheet_tab, caller_name, phone, agent_name, outcome, score, booked_appointment, qualification_notes, raw_data, created_at, synced_at)
+				VALUES ($1, $2, 'Appointments_2026', $3, $4, $5, $6, 85, 'Confirmed 30min Demo', $7, $8, NOW(), NOW())`
+			rawPayload, _ := json.Marshal(req)
+			_, _ = h.dbPool.Exec(ctx, sheetQuery, sheetID, sheetURL, callerName, req.CallerNumber, req.AgentName, outcome, notes, string(rawPayload))
+		}
 	}
 
 	// 5. Dynamic 1 credit = 1 minute billing calculation & tenant balance deduction in Database

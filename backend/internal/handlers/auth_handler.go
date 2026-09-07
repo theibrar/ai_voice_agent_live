@@ -96,19 +96,27 @@ func (h *AuthHandler) ensureSchemaAndSeed() {
 		_, _ = h.db.Exec(ctx, idxQuery)
 	}
 
-	// 5. Seed default accounts with bcrypt hashes if empty
-	var count int
-	_ = h.db.QueryRow(ctx, "SELECT COUNT(*) FROM users").Scan(&count)
-	if count == 0 {
-		superAdminHash, _ := h.authService.HashPassword("MasterSuperAdminKey2026!")
+	// 5. Seed default accounts with bcrypt hashes if missing
+	var adminExists bool
+	_ = h.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE LOWER(email) = 'admin@apexvoice.ai')").Scan(&adminExists)
+	if !adminExists {
 		adminHash, _ := h.authService.HashPassword("Admin@123")
-
-		seedQuery := `
+		seedAdmin := `
 		INSERT INTO users (id, name, email, password, role, tenant_id, avatar, phone, company, status, created_at, updated_at)
-		VALUES 
-		('usr-superadmin-1', 'Alexander Vance', 'alexander@apexsuperadmin.io', $1, 'super_admin', 0, '/avatars/alexander.png', '+1 (555) 019-9900', 'Apex Global Master Console', 'active', NOW(), NOW()),
-		('usr-admin-1', 'Sarah Jenkins', 'admin@apexvoice.ai', $2, 'admin', 1, '/avatars/sarah.png', '+1 (555) 234-5678', 'Apex Voice Enterprise', 'active', NOW(), NOW());`
-		_, _ = h.db.Exec(ctx, seedQuery, superAdminHash, adminHash)
+		VALUES ('usr-admin-1', 'Sarah Jenkins', 'admin@apexvoice.ai', $1, 'admin', 1, '/avatars/sarah.png', '+1 (555) 234-5678', 'Apex Voice Enterprise', 'active', NOW(), NOW())
+		ON CONFLICT (email) DO NOTHING;`
+		_, _ = h.db.Exec(ctx, seedAdmin, adminHash)
+	}
+
+	var superAdminExists bool
+	_ = h.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE LOWER(email) = 'alexander@apexsuperadmin.io')").Scan(&superAdminExists)
+	if !superAdminExists {
+		superAdminHash, _ := h.authService.HashPassword("MasterSuperAdminKey2026!")
+		seedSuperAdmin := `
+		INSERT INTO users (id, name, email, password, role, tenant_id, avatar, phone, company, status, created_at, updated_at)
+		VALUES ('usr-superadmin-1', 'Alexander Vance', 'alexander@apexsuperadmin.io', $1, 'super_admin', 0, '/avatars/alexander.png', '+1 (555) 019-9900', 'Apex Global Master Console', 'active', NOW(), NOW())
+		ON CONFLICT (email) DO NOTHING;`
+		_, _ = h.db.Exec(ctx, seedSuperAdmin, superAdminHash)
 	}
 }
 

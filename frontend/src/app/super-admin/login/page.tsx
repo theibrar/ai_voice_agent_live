@@ -32,68 +32,90 @@ export default function SuperAdminLoginPage() {
     setIsLoading(true);
     setAuthError(null);
 
-    try {
-      const apiUrl = getApiBase() + "/auth/login";
-      const res = await fetch(apiUrl, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim(),
-          password: password,
-          requiredRole: "super_admin",
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setIsLoading(false);
-        const errMsg = data.error || "Super Admin authentication failed. Invalid credentials.";
-        setAuthError(errMsg);
-        addToast({
-          title: "Authentication Failed",
-          description: errMsg,
-          type: "warning",
-        });
-        return;
+    const candidateEndpoints = [getApiBase() + "/auth/login"];
+    if (typeof window !== "undefined") {
+      if (!candidateEndpoints.includes("/api/v1/auth/login")) {
+        candidateEndpoints.unshift("/api/v1/auth/login");
       }
-
-      if (data.token && typeof document !== "undefined") {
-        document.cookie = `access_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+      const directBackendUrl = `${window.location.protocol}//${window.location.hostname}:8080/api/v1/auth/login`;
+      if (!candidateEndpoints.includes(directBackendUrl)) {
+        candidateEndpoints.push(directBackendUrl);
       }
-
-      await refreshAuth();
-      setIsLoading(false);
-      const matchedAdmin = superAdmins.find((a) => a.email.toLowerCase() === email.toLowerCase()) || {
-        id: data.user?.id || "usr-superadmin-1",
-        name: data.user?.name || "Alexander Vance",
-        email: data.user?.email || email,
-        role: "Master Super Admin" as const,
-        avatar: "/avatars/alexander.png",
-        status: "active" as const,
-        lastActive: "Just now",
-        twoFactorEnabled: true,
-        permissions: ["full_access" as const, "billing_override" as const, "carrier_switch" as const],
-      };
-
-      setCurrentSuperAdmin(matchedAdmin);
-      addToast({
-        title: "Super Admin Authenticated",
-        description: `Welcome Master Console, ${matchedAdmin.name}. Full platform authorization active.`,
-        type: "success",
-      });
-      router.push("/super-admin");
-    } catch (err: any) {
-      setIsLoading(false);
-      const errMsg = "Unable to connect to authentication server. Please check backend.";
-      setAuthError(errMsg);
-      addToast({
-        title: "Connection Error",
-        description: errMsg,
-        type: "warning",
-      });
     }
+
+    let lastError = "Unable to connect to authentication server. Please check backend.";
+
+    for (const endpoint of candidateEndpoints) {
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: email.trim(),
+            password: password,
+            requiredRole: "super_admin",
+          }),
+        });
+
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          lastError = `Server returned status ${res.status}. Expected JSON response.`;
+          continue;
+        }
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setIsLoading(false);
+          const errMsg = data.error || "Super Admin authentication failed. Invalid credentials.";
+          setAuthError(errMsg);
+          addToast({
+            title: "Authentication Failed",
+            description: errMsg,
+            type: "warning",
+          });
+          return;
+        }
+
+        if (data.token && typeof document !== "undefined") {
+          document.cookie = `access_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+        }
+
+        await refreshAuth();
+        setIsLoading(false);
+        const matchedAdmin = superAdmins.find((a) => a.email.toLowerCase() === email.toLowerCase()) || {
+          id: data.user?.id || "usr-superadmin-1",
+          name: data.user?.name || "Alexander Vance",
+          email: data.user?.email || email,
+          role: "Master Super Admin" as const,
+          avatar: "/avatars/alexander.png",
+          status: "active" as const,
+          lastActive: "Just now",
+          twoFactorEnabled: true,
+          permissions: ["full_access" as const, "billing_override" as const, "carrier_switch" as const],
+        };
+
+        setCurrentSuperAdmin(matchedAdmin);
+        addToast({
+          title: "Super Admin Authenticated",
+          description: `Welcome Master Console, ${matchedAdmin.name}. Full platform authorization active.`,
+          type: "success",
+        });
+        router.push("/super-admin");
+        return;
+      } catch (err: any) {
+        lastError = "Unable to connect to authentication server. Please check backend.";
+      }
+    }
+
+    setIsLoading(false);
+    setAuthError(lastError);
+    addToast({
+      title: "Connection Error",
+      description: lastError,
+      type: "warning",
+    });
   };
 
   const fillTestCredentials = (adminEmail: string) => {

@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useAppStore } from "@/lib/store";
 import { getApiBase } from "@/lib/auth-context";
+import { fetchWithAuth } from "@/lib/api-client";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { PhoneNumber } from "@/lib/types";
@@ -23,6 +24,7 @@ import {
   Loader2,
   Sparkles,
   Settings2,
+  Key,
 } from "lucide-react";
 
 interface AvailableNumberItem {
@@ -47,6 +49,9 @@ export default function PhoneNumbersPage() {
     provisionPhoneNumber,
     assignPhoneNumber,
     deletePhoneNumber,
+    getCarrierConfig,
+    saveCarrierConfig,
+    testCarrierConnection,
     agents,
     campaigns,
     addToast,
@@ -58,6 +63,17 @@ export default function PhoneNumbersPage() {
   const [availableNumbers, setAvailableNumbers] = useState<AvailableNumberItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [isProvisioning, setIsProvisioning] = useState<string | null>(null);
+  const [provisionError, setProvisionError] = useState<string | null>(null);
+
+  // Carrier & Telnyx Settings Modal
+  const [carrierModalOpen, setCarrierModalOpen] = useState(false);
+  const [carrierConfig, setCarrierConfig] = useState<{ carrier: string; has_api_key: boolean; api_key_masked?: string; connection_id?: string; sip_server?: string } | null>(null);
+  const [telnyxApiKeyInput, setTelnyxApiKeyInput] = useState("");
+  const [telnyxConnectionIdInput, setTelnyxConnectionIdInput] = useState("");
+  const [isTestingCarrier, setIsTestingCarrier] = useState(false);
+  const [carrierTestResult, setCarrierTestResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [isSavingCarrier, setIsSavingCarrier] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(false);
 
   // Assignment Modal
   const [routeModalOpen, setRouteModalOpen] = useState(false);
@@ -70,16 +86,34 @@ export default function PhoneNumbersPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [phoneToDelete, setPhoneToDelete] = useState<PhoneNumber | null>(null);
 
+  // Load carrier config
+  const loadCarrierConfig = useCallback(async () => {
+    const data = await getCarrierConfig();
+    if (data) {
+      setCarrierConfig(data);
+      setHasApiKey(data.has_api_key);
+      if (data.connection_id) setTelnyxConnectionIdInput(data.connection_id);
+    }
+  }, [getCarrierConfig]);
+
+  useEffect(() => {
+    loadCarrierConfig();
+  }, [loadCarrierConfig]);
+
   // Search Telnyx numbers
   const fetchAvailableNumbers = async (areaCode: string, numType: string) => {
     setIsSearching(true);
+    setProvisionError(null);
     try {
       const apiUrl = `${getApiBase()}/phone-numbers/available?country=US&area_code=${encodeURIComponent(areaCode)}&type=${numType}`;
-      const res = await fetch(apiUrl, { credentials: "include" });
+      const res = await fetchWithAuth(apiUrl);
       if (res.ok) {
         const data = await res.json();
         if (data && Array.isArray(data.available_numbers)) {
           setAvailableNumbers(data.available_numbers);
+        }
+        if (typeof data.has_api_key === "boolean") {
+          setHasApiKey(data.has_api_key);
         }
       }
     } catch (err) {
@@ -106,16 +140,21 @@ export default function PhoneNumbersPage() {
 
   const handleBuyNumber = async (item: AvailableNumberItem) => {
     setIsProvisioning(item.phoneNumber);
+    setProvisionError(null);
     try {
-      await provisionPhoneNumber({
+      const res = await provisionPhoneNumber({
         phoneNumber: item.phoneNumber,
         friendlyName: `Inbound DID (${item.locality || item.region || "US"})`,
         country: item.country || "US",
         monthlyCost: item.monthlyCost || 2.50,
       });
-      setShowBuyModal(false);
-    } catch (err) {
-      console.warn("Provisioning failed:", err);
+      if (res && res.success) {
+        setShowBuyModal(false);
+      } else if (res && res.error) {
+        setProvisionError(res.error);
+      }
+    } catch (err: any) {
+      setProvisionError(err?.message || "Failed to provision number.");
     } finally {
       setIsProvisioning(null);
     }
@@ -155,7 +194,23 @@ export default function PhoneNumbersPage() {
         title="Telephony & Phone Numbers"
         description="Provision dedicated local and toll-free numbers with direct SIP routing, AI agent voice bindings, and outbound caller ID registration."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <button
+              onClick={() => {
+                setCarrierTestResult(null);
+                setCarrierModalOpen(true);
+              }}
+              className={`flex items-center gap-1.5 px-3.5 py-2 border rounded-xl text-xs font-bold transition-all shadow-2xs cursor-pointer ${
+                hasApiKey
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+                  : "bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100"
+              }`}
+              title="Configure Telnyx Carrier API Key & SIP Connection"
+            >
+              <Key className="w-3.5 h-3.5" />
+              <span>{hasApiKey ? "Telnyx Carrier: Connected" : "Connect Telnyx Account"}</span>
+              <span className={`w-2 h-2 rounded-full ${hasApiKey ? "bg-emerald-500 animate-pulse" : "bg-amber-500"}`} />
+            </button>
             <button
               onClick={() => refreshPhoneNumbers()}
               className="p-2 bg-white hover:bg-[#F8FAFC] border border-[#E2E8F0] text-[#64748B] hover:text-[#0F172A] rounded-xl shadow-xs transition-colors cursor-pointer"
@@ -164,7 +219,10 @@ export default function PhoneNumbersPage() {
               <RefreshCw className="w-4 h-4" />
             </button>
             <button
-              onClick={() => setShowBuyModal(true)}
+              onClick={() => {
+                setProvisionError(null);
+                setShowBuyModal(true);
+              }}
               className="flex items-center gap-1.5 px-4 py-2 bg-[#3157D5] hover:bg-[#2646B8] text-white text-xs font-semibold rounded-xl shadow-xs transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
@@ -294,6 +352,29 @@ export default function PhoneNumbersPage() {
                 <X className="w-4 h-4" />
               </button>
             </div>
+
+            {!hasApiKey && (
+              <div className="p-3 bg-amber-50 border border-amber-300 text-amber-900 rounded-xl text-xs flex items-center justify-between gap-2">
+                <span>⚠️ Telnyx API Key not configured. Connect your Telnyx credentials to order real numbers.</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBuyModal(false);
+                    setCarrierModalOpen(true);
+                  }}
+                  className="px-2.5 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-lg font-bold shrink-0 text-[11px] cursor-pointer"
+                >
+                  Configure
+                </button>
+              </div>
+            )}
+
+            {provisionError && (
+              <div className="p-3 bg-rose-50 border border-rose-300 text-rose-700 rounded-xl text-xs font-semibold flex items-start gap-2 animate-in fade-in">
+                <span className="font-bold shrink-0">⚠️</span>
+                <span>{provisionError}</span>
+              </div>
+            )}
 
             <form onSubmit={handleSearchSubmit} className="space-y-3">
               <div className="grid grid-cols-2 gap-2">
@@ -526,6 +607,154 @@ export default function PhoneNumbersPage() {
               >
                 Release Number
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Telnyx Carrier Configuration Modal */}
+      {carrierModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+          <div className="bg-white rounded-3xl shadow-2xl border border-[#E2E8F0] max-w-md w-full p-6 space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between pb-3 border-b border-[#E2E8F0]">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center">
+                  <Key className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-[#0F172A]">Telnyx Carrier Settings</h3>
+                  <p className="text-xs text-[#64748B]">Real-time Telnyx DID provisioning & SIP Trunking</p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setCarrierModalOpen(false);
+                  setCarrierTestResult(null);
+                }}
+                className="p-1 text-[#64748B] hover:text-[#0F172A] hover:bg-[#F1F5F9] rounded-lg cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {carrierConfig?.has_api_key && (
+              <div className="p-3 bg-emerald-50 border border-emerald-300 rounded-xl text-xs font-semibold text-emerald-900 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Key active: <code className="font-mono font-bold">{carrierConfig.api_key_masked}</code></span>
+                </div>
+                <span className="text-[10px] bg-emerald-200/60 text-emerald-800 px-2 py-0.5 rounded-full font-bold">Connected</span>
+              </div>
+            )}
+
+            {carrierTestResult && (
+              <div
+                className={`p-3 rounded-xl text-xs font-semibold flex items-start gap-2 animate-in fade-in ${
+                  carrierTestResult.success
+                    ? "bg-emerald-50 border border-emerald-300 text-emerald-800"
+                    : "bg-rose-50 border border-rose-300 text-rose-700"
+                }`}
+              >
+                <span className="font-bold shrink-0">{carrierTestResult.success ? "✓" : "⚠️"}</span>
+                <span>{carrierTestResult.message}</span>
+              </div>
+            )}
+
+            <div className="space-y-3">
+              <div>
+                <label className="font-bold text-[#0F172A] text-xs block mb-1">
+                  Telnyx API Key (v2) <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="password"
+                  value={telnyxApiKeyInput}
+                  onChange={(e) => {
+                    setTelnyxApiKeyInput(e.target.value);
+                    if (carrierTestResult) setCarrierTestResult(null);
+                  }}
+                  className="w-full px-3.5 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs font-mono text-[#0F172A] outline-none focus:border-[#3157D5]"
+                  placeholder={carrierConfig?.has_api_key ? "Leave blank to keep existing key, or enter new KEY..." : "KEY0184..."}
+                />
+                <p className="text-[10px] text-[#64748B] mt-1">Found under Telnyx Console → API Keys.</p>
+              </div>
+
+              <div>
+                <label className="font-bold text-[#0F172A] text-xs block mb-1">
+                  Telnyx SIP Connection ID <span className="text-[#64748B] font-normal">(Optional)</span>
+                </label>
+                <input
+                  type="text"
+                  value={telnyxConnectionIdInput}
+                  onChange={(e) => {
+                    setTelnyxConnectionIdInput(e.target.value);
+                    if (carrierTestResult) setCarrierTestResult(null);
+                  }}
+                  className="w-full px-3.5 py-2 bg-[#F8FAFC] border border-[#CBD5E1] rounded-xl text-xs font-mono text-[#0F172A] outline-none focus:border-[#3157D5]"
+                  placeholder="e.g. 3014058183544014724"
+                />
+                <p className="text-[10px] text-[#64748B] mt-1">If specified, newly purchased DIDs are automatically attached to this SIP Trunk.</p>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-between pt-3 border-t border-[#EDF2F7]">
+              <button
+                type="button"
+                disabled={isTestingCarrier}
+                onClick={async () => {
+                  setIsTestingCarrier(true);
+                  setCarrierTestResult(null);
+                  const res = await testCarrierConnection(telnyxApiKeyInput.trim());
+                  setIsTestingCarrier(false);
+                  if (res && res.success) {
+                    setCarrierTestResult({ success: true, message: res.message || "Telnyx connected successfully!" });
+                  } else {
+                    setCarrierTestResult({ success: false, message: res?.error || "Telnyx verification failed." });
+                  }
+                }}
+                className="px-3.5 py-2 bg-emerald-50 hover:bg-emerald-100 border border-emerald-300 text-emerald-800 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 shadow-2xs"
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${isTestingCarrier ? "animate-spin text-emerald-600" : "text-emerald-600"}`} />
+                <span>{isTestingCarrier ? "Checking..." : "Test Connection & Balance"}</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCarrierModalOpen(false);
+                    setCarrierTestResult(null);
+                  }}
+                  className="px-3.5 py-2 bg-white border border-[#E2E8F0] hover:bg-[#F8FAFC] rounded-xl text-xs font-bold text-[#0F172A] cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingCarrier}
+                  onClick={async () => {
+                    const keyToSave = telnyxApiKeyInput.trim();
+                    if (!keyToSave && !carrierConfig?.has_api_key) {
+                      setCarrierTestResult({ success: false, message: "Please enter a Telnyx API Key." });
+                      return;
+                    }
+                    setIsSavingCarrier(true);
+                    const res = await saveCarrierConfig({
+                      apiKey: keyToSave,
+                      connectionId: telnyxConnectionIdInput.trim(),
+                    });
+                    setIsSavingCarrier(false);
+                    if (res && res.success) {
+                      await loadCarrierConfig();
+                      setCarrierModalOpen(false);
+                      setCarrierTestResult(null);
+                      setTelnyxApiKeyInput("");
+                    }
+                  }}
+                  className="px-4 py-2 bg-[#3157D5] hover:bg-[#2646B8] text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-[#3157D5]/20 cursor-pointer disabled:opacity-50"
+                >
+                  {isSavingCarrier ? "Saving..." : "Save Credentials"}
+                </button>
+              </div>
             </div>
           </div>
         </div>

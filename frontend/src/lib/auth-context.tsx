@@ -139,42 +139,65 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
   const login = async (email: string, pass: string, requiredRole?: string) => {
-    try {
-      const res = await fetch(`${getApiBase()}/auth/login`, {
-        method: "POST",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim(),
-          password: pass,
-          requiredRole,
-        }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        return {
-          success: false,
-          error: data.error || "Invalid email or password. Please verify your credentials.",
-        };
+    const candidateEndpoints = [`${getApiBase()}/auth/login`];
+    if (typeof window !== "undefined") {
+      if (!candidateEndpoints.includes("/api/v1/auth/login")) {
+        candidateEndpoints.unshift("/api/v1/auth/login");
       }
-
-      if (data.token && typeof window !== "undefined") {
-        localStorage.setItem("access_token", data.token);
-        if (typeof document !== "undefined") {
-          document.cookie = `access_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
-        }
+      const directBackendUrl = `${window.location.protocol}//${window.location.hostname}:8080/api/v1/auth/login`;
+      if (!candidateEndpoints.includes(directBackendUrl)) {
+        candidateEndpoints.push(directBackendUrl);
       }
-
-      await refreshAuth();
-      if (typeof window !== "undefined") {
-        window.dispatchEvent(new CustomEvent("app:auth_updated", { detail: data }));
-      }
-      const isSuperAdmin = data.user?.role === "super_admin" || email.includes("superadmin");
-      return { success: true, isSuperAdmin };
-    } catch (err: any) {
-      return { success: false, error: "Unable to connect to authentication server." };
     }
+
+    let lastError = "Unable to connect to authentication server. Please check that backend container is running.";
+
+    for (const endpoint of candidateEndpoints) {
+      try {
+        const res = await fetch(endpoint, {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email: email.trim(),
+            password: pass,
+            requiredRole,
+          }),
+        });
+
+        const contentType = res.headers.get("content-type") || "";
+        if (!contentType.includes("application/json")) {
+          lastError = `Server returned status ${res.status}. Expected JSON response from backend.`;
+          continue;
+        }
+
+        const data = await res.json();
+        if (!res.ok) {
+          return {
+            success: false,
+            error: data.error || "Invalid email or password. Please verify your credentials.",
+          };
+        }
+
+        if (data.token && typeof window !== "undefined") {
+          localStorage.setItem("access_token", data.token);
+          if (typeof document !== "undefined") {
+            document.cookie = `access_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+          }
+        }
+
+        await refreshAuth();
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("app:auth_updated", { detail: data }));
+        }
+        const isSuperAdmin = data.user?.role === "super_admin" || email.includes("superadmin");
+        return { success: true, isSuperAdmin };
+      } catch (err: any) {
+        lastError = "Unable to connect to authentication server. Please verify backend is running.";
+      }
+    }
+
+    return { success: false, error: lastError };
   };
 
   const logout = async () => {

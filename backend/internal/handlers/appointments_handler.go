@@ -236,25 +236,15 @@ func (h *AppointmentsHandler) CreateAppointment(c *gin.Context) {
 			updated_at = NOW()`
 	_, _ = h.db.Exec(ctx, crmQuery, crmContactID, req.CallerName, req.Phone, req.Email, req.Notes)
 
-	// Auto-sync into Google Sheet rows table in PostgreSQL
-	sheetRowQuery := `
-		INSERT INTO google_sheet_rows (spreadsheet_id, spreadsheet_url, sheet_tab, caller_name, phone, agent_name, outcome, score, booked_appointment, qualification_notes, raw_data, created_at, synced_at)
-		VALUES (
-			'1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms',
-			'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit',
-			'Appointments_2026',
-			$1,
-			$2,
-			$3,
-			'Confirmed Appointment',
-			95,
-			$4,
-			$5,
-			jsonb_build_object('appointmentId', $6::text, 'email', $7::text, 'meetingLink', $8::text),
-			NOW(),
-			NOW()
-		)`
-	_, _ = h.db.Exec(ctx, sheetRowQuery, req.CallerName, req.Phone, req.AgentName, scheduledAt.Format("2006-01-02 15:04"), req.Notes, req.ID, req.Email, req.MeetingLink)
+	// Auto-sync into Google Sheet rows table in PostgreSQL if Google account is connected
+	var sheetID, sheetURL string
+	_ = h.db.QueryRow(ctx, "SELECT COALESCE(config->>'spreadsheet_id', ''), COALESCE(config->>'spreadsheet_url', '') FROM integrations WHERE provider = 'google_account' AND status = 'connected'").Scan(&sheetID, &sheetURL)
+	if sheetID != "" {
+		sheetRowQuery := `
+			INSERT INTO google_sheet_rows (spreadsheet_id, spreadsheet_url, sheet_tab, caller_name, phone, agent_name, outcome, score, booked_appointment, qualification_notes, raw_data, created_at, synced_at)
+			VALUES ($1, $2, 'Appointments_2026', $3, $4, $5, 'Confirmed Appointment', 95, $6, $7, jsonb_build_object('appointmentId', $8::text, 'email', $9::text, 'meetingLink', $10::text), NOW(), NOW())`
+		_, _ = h.db.Exec(ctx, sheetRowQuery, sheetID, sheetURL, req.CallerName, req.Phone, req.AgentName, scheduledAt.Format("2006-01-02 15:04"), req.Notes, req.ID, req.Email, req.MeetingLink)
+	}
 
 	// Auto-create linked Google Drive Briefing Doc
 	docName := fmt.Sprintf("%s_Meeting_Brief.pdf", req.CallerName)

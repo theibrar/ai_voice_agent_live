@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -48,22 +49,56 @@ func (h *PhoneNumbersHandler) ensureSchema() {
 	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS capabilities JSONB DEFAULT '{"voice": true, "sms": true, "mms": false}'::jsonb;`)
 	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS assigned_agent_name VARCHAR(255);`)
 	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();`)
+	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS telnyx_order_id VARCHAR(100);`)
+	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS carrier VARCHAR(50) DEFAULT 'telnyx';`)
 }
 
-func (h *PhoneNumbersHandler) getCarrierAPIKey(ctx context.Context) (string, string) {
+type CarrierCredentials struct {
+	Carrier      string
+	APIKey       string
+	ConnectionID string
+	SIPServer    string
+}
+
+func (h *PhoneNumbersHandler) getCarrierCredentials(ctx context.Context) CarrierCredentials {
+	var creds CarrierCredentials
+	creds.Carrier = "telnyx"
+	creds.SIPServer = "sip.telnyx.com"
+
+	// 1. Check environment variable first
+	if envKey := strings.TrimSpace(os.Getenv("TELNYX_API_KEY")); envKey != "" {
+		creds.APIKey = envKey
+		creds.ConnectionID = strings.TrimSpace(os.Getenv("TELNYX_CONNECTION_ID"))
+		return creds
+	}
+
+	// 2. Query sip_trunks with case-insensitive search and prioritized defaults
 	query := `
-		SELECT carrier, api_key 
+		SELECT 
+			COALESCE(carrier, 'telnyx'),
+			api_key,
+			COALESCE(connection_id, ''),
+			COALESCE(sip_server, 'sip.telnyx.com')
 		FROM sip_trunks 
-		WHERE (is_default_carrier = true OR carrier = 'telnyx') AND api_key != ''
+		WHERE api_key != '' AND (is_default_carrier = true OR LOWER(carrier) LIKE '%telnyx%')
 		ORDER BY is_default_carrier DESC, id ASC 
 		LIMIT 1`
 
-	var carrier, apiKey string
-	err := h.db.QueryRow(ctx, query).Scan(&carrier, &apiKey)
-	if err != nil {
-		return "", ""
+	err := h.db.QueryRow(ctx, query).Scan(&creds.Carrier, &creds.APIKey, &creds.ConnectionID, &creds.SIPServer)
+	if err == nil && creds.APIKey != "" {
+		return creds
 	}
-	return carrier, apiKey
+
+	// 3. Check any trunk with an api_key
+	_ = h.db.QueryRow(ctx, `SELECT COALESCE(carrier, 'telnyx'), api_key, COALESCE(connection_id, ''), COALESCE(sip_server, 'sip.telnyx.com') FROM sip_trunks WHERE api_key != '' ORDER BY id ASC LIMIT 1`).
+		Scan(&creds.Carrier, &creds.APIKey, &creds.ConnectionID, &creds.SIPServer)
+
+	return creds
+}
+
+func (h *PhoneNumbersHandler) getCarrierAPIKey(ctx context.Context) (string, string) {
+	creds := h.getCarrierCredentials(ctx)
+	return creds.Carrier, creds.APIKey
 }
 
 type PhoneNumberResponse struct {
@@ -160,7 +195,9 @@ func (h *PhoneNumbersHandler) SearchAvailableNumbers(c *gin.Context) {
 	areaCode := strings.TrimSpace(c.Query("area_code"))
 	numberType := c.DefaultQuery("type", "local")
 
-	carrier, apiKey := h.getCarrierAPIKey(ctx)
+	creds := h.getCarrierCredentials(ctx)
+	carrier := creds.Carrier
+	apiKey := creds.APIKey
 
 	type AvailableNumberItem struct {
 		PhoneNumber     string                 `json:"phoneNumber"`
@@ -176,7 +213,7 @@ func (h *PhoneNumbersHandler) SearchAvailableNumbers(c *gin.Context) {
 
 	availableList := make([]AvailableNumberItem, 0)
 
-	if apiKey != "" && (carrier == "telnyx" || strings.HasPrefix(apiKey, "KEY")) {
+	if apiKey != "" && (strings.Contains(strings.ToLower(carrier), "telnyx") || strings.HasPrefix(apiKey, "KEY")) {
 		telnyxURL := fmt.Sprintf("https://api.telnyx.com/v2/available_phone_numbers?filter[country_code]=%s&filter[limit]=12", country)
 		if areaCode != "" {
 			telnyxURL += fmt.Sprintf("&filter[national_destination_code]=%s", areaCode)
@@ -294,6 +331,7 @@ func (h *PhoneNumbersHandler) SearchAvailableNumbers(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"available_numbers": availableList,
 		"carrier_source":    carrier,
+		"has_api_key":       apiKey != "",
 		"count":             len(availableList),
 	})
 }
@@ -321,27 +359,74 @@ func (h *PhoneNumbersHandler) ProvisionPhoneNumber(c *gin.Context) {
 	}
 
 	ctx := c.Request.Context()
-	carrier, apiKey := h.getCarrierAPIKey(ctx)
+	creds := h.getCarrierCredentials(ctx)
+	apiKey := creds.APIKey
+	connectionID := creds.ConnectionID
 
-	if apiKey != "" && (carrier == "telnyx" || strings.HasPrefix(apiKey, "KEY")) {
-		// 1. Order Phone Number with Ai_voicebot SIP Connection automatically
-		orderPayload := map[string]interface{}{
-			"phone_numbers": []map[string]string{
-				{"phone_number": req.PhoneNumber},
-			},
-			"connection_id": "3014058183544014724", // Ai_voicebot SIP FQDN Trunk to GPU
-			"messaging_profile_id": "40019f7a-a307-4b65-829a-72bda463cea9", // IbraSoft SMS Profile
-		}
-		bodyJSON, _ := json.Marshal(orderPayload)
-
-		telnyxReq, err := http.NewRequestWithContext(ctx, "POST", "https://api.telnyx.com/v2/number_orders", bytes.NewBuffer(bodyJSON))
-		if err == nil {
-			telnyxReq.Header.Set("Authorization", "Bearer "+apiKey)
-			telnyxReq.Header.Set("Content-Type", "application/json")
-			client := &http.Client{Timeout: 10 * time.Second}
-			_, _ = client.Do(telnyxReq)
-		}
+	if apiKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Telnyx API key is not configured. Please configure your Telnyx API Key in Carrier Settings before provisioning numbers.",
+		})
+		return
 	}
+
+	// 1. Order Phone Number via Telnyx v2 API
+	orderPayload := map[string]interface{}{
+		"phone_numbers": []map[string]string{
+			{"phone_number": req.PhoneNumber},
+		},
+	}
+	if connectionID != "" && connectionID != "0" {
+		orderPayload["connection_id"] = connectionID
+	}
+	bodyJSON, _ := json.Marshal(orderPayload)
+
+	telnyxReq, err := http.NewRequestWithContext(ctx, "POST", "https://api.telnyx.com/v2/number_orders", bytes.NewBuffer(bodyJSON))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to construct Telnyx number order: " + err.Error()})
+		return
+	}
+
+	telnyxReq.Header.Set("Authorization", "Bearer "+apiKey)
+	telnyxReq.Header.Set("Content-Type", "application/json")
+	telnyxReq.Header.Set("Accept", "application/json")
+
+	client := &http.Client{Timeout: 15 * time.Second}
+	resp, err := client.Do(telnyxReq)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"error": "Failed to communicate with Telnyx API: " + err.Error()})
+		return
+	}
+	defer resp.Body.Close()
+
+	respBody, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		var telnyxErr struct {
+			Errors []struct {
+				Code   string `json:"code"`
+				Title  string `json:"title"`
+				Detail string `json:"detail"`
+			} `json:"errors"`
+		}
+		errMsg := fmt.Sprintf("Telnyx order failed with status %d", resp.StatusCode)
+		if err := json.Unmarshal(respBody, &telnyxErr); err == nil && len(telnyxErr.Errors) > 0 {
+			errMsg = fmt.Sprintf("Telnyx: %s - %s", telnyxErr.Errors[0].Title, telnyxErr.Errors[0].Detail)
+		} else if len(respBody) > 0 {
+			errMsg = fmt.Sprintf("Telnyx error (%d): %s", resp.StatusCode, string(respBody))
+		}
+		c.JSON(http.StatusBadRequest, gin.H{"error": errMsg})
+		return
+	}
+
+	var telnyxSuccess struct {
+		Data struct {
+			ID     string `json:"id"`
+			Status string `json:"status"`
+		} `json:"data"`
+	}
+	_ = json.Unmarshal(respBody, &telnyxSuccess)
+	telnyxOrderID := telnyxSuccess.Data.ID
 
 	if req.FriendlyName == "" {
 		req.FriendlyName = fmt.Sprintf("Voice Inbound (%s)", formatDisplayPhoneNumber(req.PhoneNumber))
@@ -359,15 +444,16 @@ func (h *PhoneNumbersHandler) ProvisionPhoneNumber(c *gin.Context) {
 		INSERT INTO phone_numbers (
 			id, tenant_id, number, friendly_name, country,
 			assigned_agent_id, assigned_campaign_id, status, monthly_cost,
-			capabilities, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', $8, '{"voice": true, "sms": true}'::jsonb, NOW())
+			capabilities, telnyx_order_id, carrier, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', $8, '{"voice": true, "sms": true}'::jsonb, $9, 'telnyx', NOW())
 		RETURNING created_at`
 
 	var createdAt time.Time
-	err := h.db.QueryRow(
+	err = h.db.QueryRow(
 		ctx, insertQuery,
 		newID, tenantID, req.PhoneNumber, req.FriendlyName, req.Country,
 		req.AssignedAgentID, req.AssignedCampaignID, req.MonthlyCost,
+		telnyxOrderID,
 	).Scan(&createdAt)
 
 	if err != nil {
@@ -384,7 +470,8 @@ func (h *PhoneNumbersHandler) ProvisionPhoneNumber(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
-		"message": "Phone number successfully provisioned and assigned to workspace",
+		"message": "Phone number successfully ordered on Telnyx and allocated to workspace",
+		"telnyx_order_id": telnyxOrderID,
 		"phone_number": PhoneNumberResponse{
 			ID:                   newID,
 			PhoneNumber:          req.PhoneNumber,
@@ -403,6 +490,160 @@ func (h *PhoneNumbersHandler) ProvisionPhoneNumber(c *gin.Context) {
 			},
 			CreatedAt: createdAt.Format(time.RFC3339),
 		},
+	})
+}
+
+// GET /api/v1/phone-numbers/carrier
+func (h *PhoneNumbersHandler) GetCarrierConfig(c *gin.Context) {
+	ctx := c.Request.Context()
+	creds := h.getCarrierCredentials(ctx)
+
+	maskedKey := ""
+	if len(creds.APIKey) > 8 {
+		maskedKey = creds.APIKey[:4] + "..." + creds.APIKey[len(creds.APIKey)-4:]
+	} else if creds.APIKey != "" {
+		maskedKey = "***"
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"carrier":        creds.Carrier,
+		"has_api_key":    creds.APIKey != "",
+		"api_key_masked": maskedKey,
+		"connection_id":  creds.ConnectionID,
+		"sip_server":     creds.SIPServer,
+	})
+}
+
+// POST /api/v1/phone-numbers/carrier
+func (h *PhoneNumbersHandler) SaveCarrierConfig(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	var req struct {
+		APIKey       string `json:"apiKey" binding:"required"`
+		ConnectionID string `json:"connectionId"`
+		SIPServer    string `json:"sipServer"`
+	}
+
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "API Key is required: " + err.Error()})
+		return
+	}
+
+	apiKey := strings.TrimSpace(req.APIKey)
+	connectionID := strings.TrimSpace(req.ConnectionID)
+	sipServer := strings.TrimSpace(req.SIPServer)
+	if sipServer == "" {
+		sipServer = "sip.telnyx.com"
+	}
+
+	var existingID int
+	err := h.db.QueryRow(ctx, "SELECT id FROM sip_trunks WHERE LOWER(carrier) LIKE '%telnyx%' OR is_default_carrier = true ORDER BY is_default_carrier DESC, id ASC LIMIT 1").Scan(&existingID)
+	if err == nil {
+		_, _ = h.db.Exec(ctx, "UPDATE sip_trunks SET is_default_carrier = false")
+		_, err = h.db.Exec(ctx, "UPDATE sip_trunks SET api_key = $1, connection_id = $2, sip_server = $3, is_default_carrier = true, status = 'online' WHERE id = $4", apiKey, connectionID, sipServer, existingID)
+	} else {
+		_, _ = h.db.Exec(ctx, "UPDATE sip_trunks SET is_default_carrier = false")
+		_, err = h.db.Exec(ctx, `
+			INSERT INTO sip_trunks (name, carrier, status, sip_server, port, transport, api_key, connection_id, is_default_carrier, created_at)
+			VALUES ('Telnyx Primary Voice & DID', 'telnyx', 'online', $1, 5060, 'TLS', $2, $3, true, NOW())`,
+			sipServer, apiKey, connectionID,
+		)
+	}
+
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to save carrier configuration: " + err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"message":       "Telnyx credentials successfully saved and activated for phone number provisioning.",
+		"has_api_key":   true,
+		"connection_id": connectionID,
+	})
+}
+
+// POST /api/v1/phone-numbers/carrier/test
+func (h *PhoneNumbersHandler) TestCarrierConnection(c *gin.Context) {
+	ctx := c.Request.Context()
+
+	var req struct {
+		APIKey string `json:"apiKey"`
+	}
+	_ = c.ShouldBindJSON(&req)
+
+	apiKey := strings.TrimSpace(req.APIKey)
+	if apiKey == "" {
+		creds := h.getCarrierCredentials(ctx)
+		apiKey = creds.APIKey
+	}
+
+	if apiKey == "" {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "No Telnyx API key provided or found in database.",
+		})
+		return
+	}
+
+	testReq, err := http.NewRequestWithContext(ctx, "GET", "https://api.telnyx.com/v2/balance", nil)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"success": false, "error": "Failed to construct Telnyx test request: " + err.Error()})
+		return
+	}
+	testReq.Header.Set("Authorization", "Bearer "+apiKey)
+	testReq.Header.Set("Accept", "application/json")
+
+	client := &http.Client{Timeout: 8 * time.Second}
+	resp, err := client.Do(testReq)
+	if err != nil {
+		c.JSON(http.StatusBadGateway, gin.H{"success": false, "error": "Failed to connect to Telnyx API: " + err.Error()})
+		return
+	}
+	defer resp.Body.Close()
+
+	bodyBytes, _ := io.ReadAll(resp.Body)
+
+	if resp.StatusCode != http.StatusOK {
+		var telnyxErr struct {
+			Errors []struct {
+				Title  string `json:"title"`
+				Detail string `json:"detail"`
+			} `json:"errors"`
+		}
+		errMsg := fmt.Sprintf("Telnyx returned HTTP %d", resp.StatusCode)
+		if err := json.Unmarshal(bodyBytes, &telnyxErr); err == nil && len(telnyxErr.Errors) > 0 {
+			errMsg = fmt.Sprintf("%s: %s", telnyxErr.Errors[0].Title, telnyxErr.Errors[0].Detail)
+		}
+		c.JSON(http.StatusBadRequest, gin.H{
+			"success": false,
+			"error":   "Telnyx verification failed: " + errMsg,
+		})
+		return
+	}
+
+	var balanceResp struct {
+		Data struct {
+			Balance     string `json:"balance"`
+			Currency    string `json:"currency"`
+			CreditLimit string `json:"credit_limit"`
+		} `json:"data"`
+	}
+	_ = json.Unmarshal(bodyBytes, &balanceResp)
+
+	balanceStr := balanceResp.Data.Balance
+	if balanceStr == "" {
+		balanceStr = "0.00"
+	}
+	curr := balanceResp.Data.Currency
+	if curr == "" {
+		curr = "USD"
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"success":  true,
+		"balance":  balanceStr,
+		"currency": curr,
+		"message":  fmt.Sprintf("Telnyx connection successful! Live Account Balance: $%s %s", balanceStr, curr),
 	})
 }
 

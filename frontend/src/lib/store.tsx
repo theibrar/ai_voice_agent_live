@@ -213,6 +213,9 @@ interface AppContextType {
   provisionPhoneNumber: (data: { phoneNumber: string; friendlyName: string; country?: string; assignedAgentId?: string; assignedCampaignId?: string; monthlyCost?: number }) => Promise<any>;
   assignPhoneNumber: (id: string, updates: { assignedAgentId?: string; assignedCampaignId?: string; friendlyName?: string }) => Promise<void>;
   deletePhoneNumber: (id: string) => Promise<void>;
+  getCarrierConfig: () => Promise<any>;
+  saveCarrierConfig: (data: { apiKey: string; connectionId?: string; sipServer?: string }) => Promise<any>;
+  testCarrierConnection: (apiKey?: string) => Promise<any>;
   incomingConnections: IncomingConnection[];
   templates: Template[];
 
@@ -1204,27 +1207,96 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       });
+      const respData = await res.json().catch(() => ({}));
       if (res.ok) {
-        const respData = await res.json();
         addToast({
           title: "Number Provisioned",
-          description: `Allocated ${data.phoneNumber} to workspace successfully.`,
+          description: `Allocated ${data.phoneNumber} to your Telnyx account and workspace successfully!`,
           type: "success",
         });
         await refreshPhoneNumbers();
-        return respData.phone_number;
+        return { success: true, phone_number: respData.phone_number };
       } else {
-        const errData = await res.json().catch(() => ({}));
+        const errMsg = respData.error || "Failed to provision number on Telnyx.";
         addToast({
           title: "Provision Failed",
-          description: errData.error || "Failed to provision number.",
+          description: errMsg,
           type: "error",
         });
+        return { success: false, error: errMsg };
       }
-    } catch (err) {
-      console.warn("Failed to provision phone number:", err);
+    } catch (err: any) {
+      const errMsg = err?.message || "Failed to provision phone number.";
+      addToast({
+        title: "Provision Error",
+        description: errMsg,
+        type: "error",
+      });
+      return { success: false, error: errMsg };
     }
   }, [addToast, refreshPhoneNumbers]);
+
+  const getCarrierConfig = useCallback(async () => {
+    try {
+      const apiUrl = getApiBase() + '/phone-numbers/carrier';
+      const res = await apiFetch(apiUrl);
+      if (res.ok) {
+        return await res.json();
+      }
+    } catch (err) {
+      console.warn("Failed to fetch carrier config:", err);
+    }
+    return { has_api_key: false, carrier: "telnyx" };
+  }, []);
+
+  const saveCarrierConfig = useCallback(async (data: { apiKey: string; connectionId?: string; sipServer?: string }) => {
+    try {
+      const apiUrl = getApiBase() + '/phone-numbers/carrier';
+      const res = await apiFetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+      const resData = await res.json().catch(() => ({}));
+      if (res.ok) {
+        addToast({
+          title: "Carrier Config Saved",
+          description: "Telnyx credentials successfully saved and activated.",
+          type: "success",
+        });
+        return { success: true, ...resData };
+      } else {
+        addToast({
+          title: "Save Failed",
+          description: resData.error || "Failed to save carrier configuration.",
+          type: "error",
+        });
+        return { success: false, error: resData.error };
+      }
+    } catch (err: any) {
+      const errMsg = err?.message || "Failed to save carrier credentials.";
+      addToast({
+        title: "Save Error",
+        description: errMsg,
+        type: "error",
+      });
+      return { success: false, error: errMsg };
+    }
+  }, [addToast]);
+
+  const testCarrierConnection = useCallback(async (apiKey?: string) => {
+    try {
+      const apiUrl = getApiBase() + '/phone-numbers/carrier/test';
+      const res = await apiFetch(apiUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: apiKey || "" }),
+      });
+      return await res.json();
+    } catch (err: any) {
+      return { success: false, error: err?.message || "Failed to verify Telnyx API connection." };
+    }
+  }, []);
 
   const assignPhoneNumber = useCallback(async (id: string, updates: { assignedAgentId?: string; assignedCampaignId?: string; friendlyName?: string }) => {
     try {
@@ -1624,6 +1696,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         provisionPhoneNumber,
         assignPhoneNumber,
         deletePhoneNumber,
+        getCarrierConfig,
+        saveCarrierConfig,
+        testCarrierConnection,
         incomingConnections,
         templates,
         flowNodes,

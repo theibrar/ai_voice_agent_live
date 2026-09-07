@@ -17,6 +17,30 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
+  async rewrites() {
+    const backendHost =
+      process.env.INTERNAL_BACKEND_URL ||
+      process.env.BACKEND_URL ||
+      (process.env.NODE_ENV === "production" ? "http://backend:8080" : "http://localhost:8080");
+    return [
+      {
+        source: "/api/v1/:path*",
+        destination: `${backendHost}/api/v1/:path*`,
+      },
+      {
+        source: "/ws/:path*",
+        destination: `${backendHost}/ws/:path*`,
+      },
+      {
+        source: "/api/simulator/:path*",
+        destination: `${backendHost}/api/simulator/:path*`,
+      },
+      {
+        source: "/api/tts/:path*",
+        destination: `${backendHost}/api/tts/:path*`,
+      },
+    ];
+  },
 } as NextConfig;
 
 export default nextConfig;
