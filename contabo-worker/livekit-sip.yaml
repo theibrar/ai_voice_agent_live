@@ -38,3 +38,15 @@ inbound_rules:
     attributes:
       source: "telnyx_sip"
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Outbound SIP Trunks (for Outbound Campaigns & Dialing via Telnyx)
+# ─────────────────────────────────────────────────────────────────────────────
+outbound_trunks:
+  - name: "Telnyx Outbound Trunk"
+    address: "sip.telnyx.com:5060"
+    transport: udp
+    auth:
+      username: "aivoiceabott"
+      password: "ai_voicee_bott@78692"
+
+

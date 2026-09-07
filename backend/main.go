@@ -93,6 +93,7 @@ func main() {
 	r.POST("/api/tts/synthesize", ttsHandler.SynthesizeSpeech)
 	r.POST("/api/simulator/chat", simulatorHandler.SimulateChat)
 	r.POST("/simulator-api/chat", simulatorHandler.SimulateChat)
+	r.POST("/api/webhooks/telnyx", webhooksHandler.IngestTelnyxWebhook)
 
 	api := r.Group("/api/v1")
 	{
