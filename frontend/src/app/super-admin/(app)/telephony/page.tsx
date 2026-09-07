@@ -54,8 +54,11 @@ export default function SuperAdminTelephonyPage() {
   const [carrier, setCarrier] = useState<any>("telnyx");
   const [sipServer, setSipServer] = useState("sip.telnyx.com");
   const [port, setPort] = useState(5060);
-  const [transport, setTransport] = useState<"UDP" | "TCP" | "TLS" | string>("TLS");
+  const [transport, setTransport] = useState<"UDP" | "TCP" | "TLS" | string>("UDP");
   const [apiKey, setApiKey] = useState("");
+  const [authUsername, setAuthUsername] = useState("");
+  const [authPassword, setAuthPassword] = useState("");
+  const [connectionId, setConnectionId] = useState("");
   const [maxChannels, setMaxChannels] = useState(1000);
   const [wholesaleRate, setWholesaleRate] = useState(0.0035);
 
@@ -64,8 +67,11 @@ export default function SuperAdminTelephonyPage() {
   const [editCarrier, setEditCarrier] = useState<any>("telnyx");
   const [editSipServer, setEditSipServer] = useState("");
   const [editPort, setEditPort] = useState(5060);
-  const [editTransport, setEditTransport] = useState<"UDP" | "TCP" | "TLS" | string>("TLS");
+  const [editTransport, setEditTransport] = useState<"UDP" | "TCP" | "TLS" | string>("UDP");
   const [editApiKey, setEditApiKey] = useState("");
+  const [editAuthUsername, setEditAuthUsername] = useState("");
+  const [editAuthPassword, setEditAuthPassword] = useState("");
+  const [editConnectionId, setEditConnectionId] = useState("");
   const [editMaxChannels, setEditMaxChannels] = useState(1000);
   const [editWholesaleRate, setEditWholesaleRate] = useState(0.0035);
   const [editStatus, setEditStatus] = useState<"online" | "degraded" | "offline">("online");
@@ -78,6 +84,9 @@ export default function SuperAdminTelephonyPage() {
     setEditPort(c.port);
     setEditTransport(c.transport);
     setEditApiKey(c.apiKey || "");
+    setEditAuthUsername(c.authUsername || "");
+    setEditAuthPassword(c.authPassword || "");
+    setEditConnectionId(c.connectionId || "");
     setEditMaxChannels(c.maxChannels);
     setEditWholesaleRate(c.ratePerMinuteWholesale);
     setEditStatus(c.status);
@@ -96,6 +105,9 @@ export default function SuperAdminTelephonyPage() {
       port: editPort,
       transport: editTransport,
       apiKey: editApiKey.trim() || undefined,
+      authUsername: editAuthUsername.trim() || undefined,
+      authPassword: editAuthPassword.trim() || undefined,
+      connectionId: editConnectionId.trim() || undefined,
       maxChannels: editMaxChannels,
       ratePerMinuteWholesale: editWholesaleRate,
     });
@@ -116,6 +128,9 @@ export default function SuperAdminTelephonyPage() {
       port,
       transport,
       apiKey: apiKey.trim() || undefined,
+      authUsername: authUsername.trim() || undefined,
+      authPassword: authPassword.trim() || undefined,
+      connectionId: connectionId.trim() || undefined,
       codecPriority: ["Opus (48kHz)", "G.711u", "G.711a"],
       maxChannels,
       ratePerMinuteWholesale: wholesaleRate,
@@ -125,6 +140,9 @@ export default function SuperAdminTelephonyPage() {
 
     setName("");
     setApiKey("");
+    setAuthUsername("");
+    setAuthPassword("");
+    setConnectionId("");
     setModalOpen(false);
   };
 
@@ -328,6 +346,22 @@ export default function SuperAdminTelephonyPage() {
                       <span className="text-[#64748B]">Assigned Tenants:</span>
                       <span className="font-bold text-[#0F172A]">{assignedTenants.length} Tenant Orgs</span>
                     </div>
+                    {carrier.authUsername && (
+                      <div className="flex items-center justify-between pt-1 border-t border-[#EDF2F7]">
+                        <span className="text-[#64748B]">SIP Trunk User:</span>
+                        <span className="font-mono font-bold text-[#0F172A] text-[11px]">
+                          {carrier.authUsername}
+                        </span>
+                      </div>
+                    )}
+                    {carrier.connectionId && (
+                      <div className="flex items-center justify-between">
+                        <span className="text-[#64748B]">Connection ID:</span>
+                        <span className="font-mono text-[#0F172A] text-[11px]">
+                          {carrier.connectionId}
+                        </span>
+                      </div>
+                    )}
                     {carrier.apiKey && (
                       <div className="flex items-center justify-between pt-1 border-t border-[#EDF2F7]">
                         <span className="text-[#64748B]">Auth API Key:</span>
@@ -445,15 +479,50 @@ export default function SuperAdminTelephonyPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="font-bold text-[#0F172A] block mb-1">API Key / Auth Token / Secret</label>
-                <input
-                  type="password"
-                  placeholder="e.g. KEY_************************"
-                  value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl outline-none focus:border-[#3157D5] text-[#0F172A] font-mono"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-[#0F172A] block mb-1">SIP Auth Username / Trunk User</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. aivoiceabott"
+                    value={authUsername}
+                    onChange={(e) => setAuthUsername(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl outline-none focus:border-[#3157D5] text-[#0F172A] font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-[#0F172A] block mb-1">SIP Auth Secret / Password</label>
+                  <input
+                    type="password"
+                    placeholder="e.g. ai_voicee_bott@78692"
+                    value={authPassword}
+                    onChange={(e) => setAuthPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl outline-none focus:border-[#3157D5] text-[#0F172A] font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-[#0F172A] block mb-1">Telnyx Connection ID / SIP Trunk ID</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 3014058183544014724"
+                    value={connectionId}
+                    onChange={(e) => setConnectionId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl outline-none focus:border-[#3157D5] text-[#0F172A] font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-[#0F172A] block mb-1">Management API Key (Optional)</label>
+                  <input
+                    type="password"
+                    placeholder="e.g. KEY_************************"
+                    value={apiKey}
+                    onChange={(e) => setApiKey(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl outline-none focus:border-[#3157D5] text-[#0F172A] font-mono"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
@@ -597,15 +666,50 @@ export default function SuperAdminTelephonyPage() {
                 </div>
               </div>
 
-              <div>
-                <label className="font-bold text-[#0F172A] block mb-1">API Key / Auth Token / Secret</label>
-                <input
-                  type="password"
-                  placeholder="e.g. KEY_************************"
-                  value={editApiKey}
-                  onChange={(e) => setEditApiKey(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl outline-none focus:border-[#3157D5] text-[#0F172A] font-mono"
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-[#0F172A] block mb-1">SIP Auth Username / Trunk User</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. aivoiceabott"
+                    value={editAuthUsername}
+                    onChange={(e) => setEditAuthUsername(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl outline-none focus:border-[#3157D5] text-[#0F172A] font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-[#0F172A] block mb-1">SIP Auth Secret / Password</label>
+                  <input
+                    type="password"
+                    placeholder="e.g. ai_voicee_bott@78692"
+                    value={editAuthPassword}
+                    onChange={(e) => setEditAuthPassword(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl outline-none focus:border-[#3157D5] text-[#0F172A] font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-[#0F172A] block mb-1">Telnyx Connection ID / SIP Trunk ID</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 3014058183544014724"
+                    value={editConnectionId}
+                    onChange={(e) => setEditConnectionId(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl outline-none focus:border-[#3157D5] text-[#0F172A] font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-[#0F172A] block mb-1">Management API Key (Optional)</label>
+                  <input
+                    type="password"
+                    placeholder="e.g. KEY_************************"
+                    value={editApiKey}
+                    onChange={(e) => setEditApiKey(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-[#E2E8F0] rounded-xl outline-none focus:border-[#3157D5] text-[#0F172A] font-mono"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">

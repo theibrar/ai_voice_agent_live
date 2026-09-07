@@ -884,6 +884,9 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
           popRegions: carrierData.popRegions || ["US-East", "US-West"],
           isDefaultCarrier: carrierData.isDefaultCarrier || false,
           apiKey: carrierData.apiKey || "",
+          authUsername: carrierData.authUsername || "",
+          authPassword: carrierData.authPassword || "",
+          connectionId: carrierData.connectionId || "",
         }),
       });
 

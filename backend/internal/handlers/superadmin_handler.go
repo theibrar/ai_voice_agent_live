@@ -176,6 +176,9 @@ func (h *SuperAdminHandler) ensureSchemaAndSeed() {
 		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS pop_regions JSONB DEFAULT '["US-East", "US-West", "EU", "AP"]'::jsonb;
 		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS is_default_carrier BOOLEAN DEFAULT false;
 		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS api_key VARCHAR(255) DEFAULT '';
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS auth_username VARCHAR(255) DEFAULT '';
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS auth_password VARCHAR(255) DEFAULT '';
+		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS connection_id VARCHAR(255) DEFAULT '';
 		ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
 	`)
 
@@ -787,6 +790,9 @@ type SipCarrierFull struct {
 	Port                   int      `json:"port"`
 	Transport              string   `json:"transport"`
 	APIKey                 string   `json:"apiKey"`
+	AuthUsername           string   `json:"authUsername"`
+	AuthPassword           string   `json:"authPassword"`
+	ConnectionID           string   `json:"connectionId"`
 	CodecPriority          []string `json:"codecPriority"`
 	MaxChannels            int      `json:"maxChannels"`
 	AllocatedChannels      int      `json:"allocatedChannels"`
@@ -804,7 +810,10 @@ func (h *SuperAdminHandler) GetTrunks(c *gin.Context) {
 			COALESCE(codec_priority, '["Opus", "G.711u"]'::jsonb),
 			max_channels, allocated_channels, rate_per_minute_wholesale,
 			COALESCE(pop_regions, '["US-East", "US-West"]'::jsonb),
-			is_default_carrier
+			is_default_carrier,
+			COALESCE(auth_username, ''),
+			COALESCE(auth_password, ''),
+			COALESCE(connection_id, '')
 		FROM sip_trunks 
 		ORDER BY id ASC
 	`)
@@ -817,7 +826,7 @@ func (h *SuperAdminHandler) GetTrunks(c *gin.Context) {
 	carriers := make([]SipCarrierFull, 0)
 	for rows.Next() {
 		var id, port, maxCh, allocCh int
-		var name, carrier, status, sipServer, transport, apiKey string
+		var name, carrier, status, sipServer, transport, apiKey, authUser, authPass, connID string
 		var rate float64
 		var isDefault bool
 		var codecJSON, popJSON []byte
@@ -825,6 +834,7 @@ func (h *SuperAdminHandler) GetTrunks(c *gin.Context) {
 		if err := rows.Scan(
 			&id, &name, &carrier, &status, &sipServer, &port, &transport, &apiKey,
 			&codecJSON, &maxCh, &allocCh, &rate, &popJSON, &isDefault,
+			&authUser, &authPass, &connID,
 		); err == nil {
 			var codecs []string
 			_ = json.Unmarshal(codecJSON, &codecs)
@@ -840,6 +850,9 @@ func (h *SuperAdminHandler) GetTrunks(c *gin.Context) {
 				Port:                   port,
 				Transport:              transport,
 				APIKey:                 apiKey,
+				AuthUsername:           authUser,
+				AuthPassword:           authPass,
+				ConnectionID:           connID,
 				CodecPriority:          codecs,
 				MaxChannels:            maxCh,
 				AllocatedChannels:      allocCh,
@@ -865,6 +878,9 @@ func (h *SuperAdminHandler) CreateTrunk(c *gin.Context) {
 		Port                   int      `json:"port"`
 		Transport              string   `json:"transport"`
 		APIKey                 string   `json:"apiKey"`
+		AuthUsername           string   `json:"authUsername"`
+		AuthPassword           string   `json:"authPassword"`
+		ConnectionID           string   `json:"connectionId"`
 		CodecPriority          []string `json:"codecPriority"`
 		MaxChannels            int      `json:"maxChannels"`
 		RatePerMinuteWholesale float64  `json:"ratePerMinuteWholesale"`
@@ -916,14 +932,16 @@ func (h *SuperAdminHandler) CreateTrunk(c *gin.Context) {
 		INSERT INTO sip_trunks (
 			name, carrier, status, sip_server, port, transport, api_key,
 			codec_priority, max_channels, allocated_channels,
-			rate_per_minute_wholesale, pop_regions, is_default_carrier, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, $10, $11, $12, NOW())
+			rate_per_minute_wholesale, pop_regions, is_default_carrier,
+			auth_username, auth_password, connection_id, created_at
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 0, $10, $11, $12, $13, $14, $15, NOW())
 		RETURNING id`
 
 	err := h.db.QueryRow(
 		ctx, query,
 		req.Name, req.Carrier, req.Status, req.SipServer, req.Port, req.Transport, req.APIKey,
 		codecJSON, req.MaxChannels, req.RatePerMinuteWholesale, popJSON, req.IsDefaultCarrier,
+		req.AuthUsername, req.AuthPassword, req.ConnectionID,
 	).Scan(&newID)
 
 	if err != nil {
@@ -942,6 +960,9 @@ func (h *SuperAdminHandler) CreateTrunk(c *gin.Context) {
 			Port:                   req.Port,
 			Transport:              req.Transport,
 			APIKey:                 req.APIKey,
+			AuthUsername:           req.AuthUsername,
+			AuthPassword:           req.AuthPassword,
+			ConnectionID:           req.ConnectionID,
 			CodecPriority:          req.CodecPriority,
 			MaxChannels:            req.MaxChannels,
 			AllocatedChannels:      0,
@@ -970,6 +991,9 @@ func (h *SuperAdminHandler) UpdateTrunk(c *gin.Context) {
 		Port                   int      `json:"port"`
 		Transport              string   `json:"transport"`
 		APIKey                 string   `json:"apiKey"`
+		AuthUsername           string   `json:"authUsername"`
+		AuthPassword           string   `json:"authPassword"`
+		ConnectionID           string   `json:"connectionId"`
 		CodecPriority          []string `json:"codecPriority"`
 		MaxChannels            int      `json:"maxChannels"`
 		RatePerMinuteWholesale float64  `json:"ratePerMinuteWholesale"`
@@ -1011,15 +1035,17 @@ func (h *SuperAdminHandler) UpdateTrunk(c *gin.Context) {
 		UPDATE sip_trunks
 		SET name = $1, carrier = $2, status = $3, sip_server = $4, port = $5, transport = $6,
 		    api_key = $7, codec_priority = $8, max_channels = $9, rate_per_minute_wholesale = $10,
-		    pop_regions = $11, is_default_carrier = $12
-		WHERE id = $13
+		    pop_regions = $11, is_default_carrier = $12,
+		    auth_username = $13, auth_password = $14, connection_id = $15
+		WHERE id = $16
 	`
 
 	_, err = h.db.Exec(
 		ctx, query,
 		req.Name, req.Carrier, req.Status, req.SipServer, req.Port, req.Transport,
 		req.APIKey, codecJSON, req.MaxChannels, req.RatePerMinuteWholesale,
-		popJSON, req.IsDefaultCarrier, id,
+		popJSON, req.IsDefaultCarrier,
+		req.AuthUsername, req.AuthPassword, req.ConnectionID, id,
 	)
 
 	if err != nil {
@@ -1038,6 +1064,9 @@ func (h *SuperAdminHandler) UpdateTrunk(c *gin.Context) {
 			Port:                   req.Port,
 			Transport:              req.Transport,
 			APIKey:                 req.APIKey,
+			AuthUsername:           req.AuthUsername,
+			AuthPassword:           req.AuthPassword,
+			ConnectionID:           req.ConnectionID,
 			CodecPriority:          req.CodecPriority,
 			MaxChannels:            req.MaxChannels,
 			AllocatedChannels:      0,
