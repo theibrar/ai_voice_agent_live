@@ -122,15 +122,6 @@ func main() {
 		api.POST("/rag/query", ragHandler.Search)
 		api.POST("/appointments", appointmentsHandler.CreateAppointment)
 		api.POST("/contacts", contactsHandler.CreateOrUpdateContact)
-		api.GET("/knowledge", knowledgeHandler.ListKnowledgeSources)
-		api.GET("/integrations/google/status", integrationsHandler.GetGoogleStatus)
-		api.POST("/integrations/google/test", integrationsHandler.TestGoogleConnection)
-		api.POST("/integrations/google/disconnect", integrationsHandler.DisconnectGoogleAccount)
-		api.GET("/integrations/google-sheets/rows", integrationsHandler.GetGoogleSheetRows)
-		api.DELETE("/integrations/google-sheets/rows", integrationsHandler.ClearGoogleSheetRows)
-		api.GET("/phone-numbers/carrier", phoneNumbersHandler.GetCarrierConfig)
-		api.POST("/phone-numbers/carrier", phoneNumbersHandler.SaveCarrierConfig)
-		api.POST("/phone-numbers/carrier/test", phoneNumbersHandler.TestCarrierConnection)
 
 		// Real-Time WebSocket Endpoint
 		api.GET("/ws/calls", func(c *gin.Context) {
@@ -171,6 +162,7 @@ func main() {
 			tenantGroup.POST("/leads/update", leadsHandler.UpdateStatus)
 
 			// Knowledge Base & Grounding RAG
+			tenantGroup.GET("/knowledge", knowledgeHandler.ListKnowledgeSources)
 			tenantGroup.GET("/knowledge/:id", knowledgeHandler.GetKnowledgeSource)
 			tenantGroup.POST("/knowledge", knowledgeHandler.CreateKnowledgeSource)
 			tenantGroup.PUT("/knowledge/:id", knowledgeHandler.UpdateKnowledgeSource)
