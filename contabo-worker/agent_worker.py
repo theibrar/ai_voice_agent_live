@@ -263,18 +263,23 @@ class CallSession:
         """Write call record and transcript to PostgreSQL via Go backend."""
         self.is_active = False
         duration_s = max(1, int(time.time() - self.start_time))
-        logger.info(f"Call finished | {self.call_id} | {duration_s}s")
+        logger.info(f"Finalizing call | {self.call_id} | duration: {duration_s}s")
 
         transcript_text = "\n".join(
             f"{m['role'].upper()}: {m.get('content', '')}"
             for m in self.chat_history
             if m.get("content")
         )
+        if not transcript_text:
+            transcript_text = f"ASSISTANT: {self.greeting}"
+
         sess = await get_session()
         payload = {
             "call_id":            self.call_id,
             "tenant_id":          self.tenant_id,
+            "caller_name":        "Direct Caller",
             "caller_number":      self.customer_phone,
+            "called_did":         self.caller_did,
             "agent_name":         self.agent_name,
             "duration":           duration_s,
             "billed_minutes":     (duration_s + 59) // 60,
@@ -283,6 +288,7 @@ class CallSession:
             "sentiment":          "positive",
             "score":              95 if self.appointment_booked else 80,
             "appointment_booked": self.appointment_booked,
+            "recording_url":      f"https://storage.apexvoice.ai/recordings/{self.call_id}.mp3",
         }
         try:
             async with sess.post(
@@ -290,10 +296,14 @@ class CallSession:
                 json=payload,
                 headers={"Content-Type": "application/json"},
             ) as r:
+                resp_text = await r.text()
                 if r.status in (200, 201):
-                    logger.success("Call record written to PostgreSQL.")
+                    logger.success(f"Call record successfully written to PostgreSQL | {self.call_id}")
+                else:
+                    logger.warning(f"Backend /calls/end returned {r.status}: {resp_text}")
         except Exception as e:
             logger.error(f"Failed to persist call record: {e}")
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -646,7 +656,7 @@ async def entrypoint(ctx: JobContext):
     await ctx.connect(auto_subscribe=AutoSubscribe.AUDIO_ONLY)
 
     participant: rtc.RemoteParticipant = await ctx.wait_for_participant()
-    logger.info(f"Caller joined | Identity: {participant.identity}")
+    logger.info(f"Caller joined | Identity: {participant.identity} | Phone: {participant.attributes.get('sip.phoneNumber', participant.identity)}")
 
     cs = CallSession(ctx.room, participant)
     await cs.handshake_backend()
@@ -659,60 +669,67 @@ async def entrypoint(ctx: JobContext):
 
     sess = await get_session()
 
-    # Greeting
-    greeting_txt = cs.greeting
-    if not greeting_txt:
-        first_name   = cs.agent_name.split()[0]
-        greeting_txt = (
-            f"Hello! Thanks for calling. My name is {first_name}. "
-            "How can I help you today?"
-        )
-    logger.info(f"Greeting: \"{greeting_txt}\"")
-    await play_pcm(
-        audio_source,
-        tts_stream_pcm(sess, greeting_txt, cs.voice_name, cs.voice_speed),
-        cs,
-    )
-    cs.chat_history.append({"role": "assistant", "content": greeting_txt})
+    # Audio ingest queue & lifecycle listeners
+    audio_queue: asyncio.Queue = asyncio.Queue(maxsize=16)
+    greeting_start_time = time.time()
 
-    # Audio ingest queue
-    audio_queue: asyncio.Queue = asyncio.Queue(maxsize=8)
+    @ctx.room.on("participant_disconnected")
+    def on_participant_disconnected(p: rtc.RemoteParticipant):
+        if p.identity == participant.identity or len(ctx.room.remote_participants) == 0:
+            logger.info(f"Caller [{p.identity}] hung up.")
+            cs.is_active = False
+            cs.should_hangup = True
 
-    @ctx.room.on("track_subscribed")
-    def on_track(
-        remote_track: rtc.Track,
-        pub: rtc.RemoteTrackPublication,
-        remote_p: rtc.RemoteParticipant,
-    ):
+    @ctx.room.on("disconnected")
+    def on_disconnected():
+        logger.info(f"Room [{ctx.room.name}] disconnected.")
+        cs.is_active = False
+        cs.should_hangup = True
+
+    def start_reading_audio(remote_track: rtc.Track):
         if remote_track.kind != rtc.TrackKind.KIND_AUDIO:
             return
-        logger.info("Subscribed to caller audio.")
+        logger.info(f"Subscribed & listening to caller audio track: {remote_track.sid}")
         stream = rtc.AudioStream(remote_track)
 
         async def _read_audio():
-            speaking       = False
+            speaking = False
+            consecutive_speech = 0
             silence_frames = 0
-            pcm_buf        = bytearray()
+            pcm_buf = bytearray()
+            sample_rate = 16000
 
             async for ev in stream:
-                raw    = bytes(ev.frame.data)
+                if not cs.is_active or cs.should_hangup:
+                    break
+                raw = bytes(ev.frame.data)
+                sample_rate = ev.frame.sample_rate or 16000
                 energy = pcm_energy(raw)
 
-                if energy > VAD_ENERGY_THRESHOLD:
-                    if not speaking:
-                        speaking = True
-                        cs.barge_in.set()   # interrupt TTS immediately
-                    silence_frames = 0
-                    pcm_buf.extend(raw)
+                # Telephone voice energy detection (850 threshold)
+                if energy > 850:
+                    consecutive_speech += 1
+                    # Require at least 3 frames (~60ms) of sustained energy to avoid line clicks
+                    if consecutive_speech >= 3:
+                        if not speaking:
+                            speaking = True
+                            # Don't false-interrupt during the first 1.2s of greeting
+                            if time.time() - greeting_start_time > 1.2:
+                                cs.barge_in.set()
+                        silence_frames = 0
+                        pcm_buf.extend(raw)
                 else:
+                    consecutive_speech = 0
                     if speaking:
                         pcm_buf.extend(raw)
                         silence_frames += 1
-                        if silence_frames >= END_OF_TURN_SILENCE_FRAMES:
+                        # 25 frames @ 20ms = ~500ms silence ends user turn
+                        if silence_frames >= 25:
                             speaking = False
-                            if len(pcm_buf) > 6400:
-                                # Convert caller 48kHz/16kHz PCM to WAV for STT
-                                wav = pcm16_to_wav(bytes(pcm_buf), sample_rate=ev.frame.sample_rate)
+                            # Only transcribe if audio is longer than 350ms
+                            min_bytes = int(sample_rate * 0.35 * 2)
+                            if len(pcm_buf) > min_bytes:
+                                wav = pcm16_to_wav(bytes(pcm_buf), sample_rate=sample_rate)
                                 try:
                                     audio_queue.put_nowait(wav)
                                 except asyncio.QueueFull:
@@ -722,30 +739,56 @@ async def entrypoint(ctx: JobContext):
 
         asyncio.create_task(_read_audio())
 
-    # Main conversational loop
+    @ctx.room.on("track_subscribed")
+    def on_track(remote_track: rtc.Track, pub: rtc.RemoteTrackPublication, remote_p: rtc.RemoteParticipant):
+        start_reading_audio(remote_track)
+
+    # Immediately attach to any already-subscribed tracks
+    for pub in participant.track_publications.values():
+        if pub.track and pub.track.kind == rtc.TrackKind.KIND_AUDIO:
+            start_reading_audio(pub.track)
+
+    # Speak Greeting
+    greeting_txt = cs.greeting
+    if not greeting_txt:
+        first_name = cs.agent_name.split()[0]
+        greeting_txt = f"Hello! Thanks for calling IbraSoft. My name is {first_name}. How can I help you today?"
+    logger.info(f"Speaking Greeting: \"{greeting_txt}\"")
+    greeting_start_time = time.time()
+    await play_pcm(
+        audio_source,
+        tts_stream_pcm(sess, greeting_txt, cs.voice_name, cs.voice_speed),
+        cs,
+    )
+    cs.chat_history.append({"role": "assistant", "content": greeting_txt})
+
+    # Main conversational turn-taking loop
     try:
-        while cs.is_active:
+        while cs.is_active and not cs.should_hangup:
+            if len(ctx.room.remote_participants) == 0:
+                logger.info("Caller is no longer in room. Finishing call.")
+                break
+
             try:
-                wav_bytes = await asyncio.wait_for(audio_queue.get(), timeout=0.5)
+                wav_bytes = await asyncio.wait_for(audio_queue.get(), timeout=0.4)
             except asyncio.TimeoutError:
-                if cs.should_hangup:
-                    break
                 continue
 
             cs.barge_in.clear()
 
-            # 1. STT
+            # 1. Transcribe speech using GPU STT (Parakeet-TDT)
             user_text = await transcribe(wav_bytes)
             if not user_text:
                 continue
 
             cs.chat_history.append({"role": "user", "content": user_text})
-            logger.info(f"User: \"{user_text}\"")
+            logger.info(f"Caller: \"{user_text}\"")
 
-            # 2. LLM -> TTS -> LiveKit (clause-by-clause for minimum TTFA)
+            # 2. Stream LLM response & Kokoro TTS clauses
             full_reply = ""
             async for clause in stream_llm(sess, cs):
                 if cs.barge_in.is_set():
+                    logger.info("Caller interrupted (barge-in). Stopping TTS.")
                     break
                 full_reply += " " + clause
                 await play_pcm(
@@ -758,14 +801,25 @@ async def entrypoint(ctx: JobContext):
                 cs.chat_history.append({"role": "assistant", "content": full_reply.strip()})
 
             if cs.should_hangup:
-                await asyncio.sleep(0.8)
+                await asyncio.sleep(0.5)
                 break
 
     except asyncio.CancelledError:
         pass
+    except Exception as e:
+        logger.error(f"Error in conversational loop: {e}")
     finally:
-        await cs.finalize_call()
-        logger.info(f"Room {ctx.room.name} session closed.")
+        logger.info(f"Finalizing call {cs.call_id} and persisting transcript/recording...")
+        try:
+            await cs.finalize_call()
+        except Exception as e:
+            logger.error(f"finalize_call error: {e}")
+        try:
+            await ctx.room.disconnect()
+        except Exception:
+            pass
+        logger.info(f"Room {ctx.room.name} closed and worker released.")
+
 
 
 # ─────────────────────────────────────────────────────────────────────────────
