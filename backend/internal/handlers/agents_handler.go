@@ -49,10 +49,12 @@ func (h *AgentsHandler) ensureSchemaAndSeed() {
 		transfer_rules JSONB DEFAULT '{}'::jsonb,
 		call_ending_rules JSONB DEFAULT '{}'::jsonb,
 		metrics JSONB DEFAULT '{}'::jsonb,
+		tenant_id INT DEFAULT 1,
 		created_at TIMESTAMPTZ DEFAULT NOW(),
 		updated_at TIMESTAMPTZ DEFAULT NOW()
 	);`
 	_, _ = h.db.Exec(ctx, createTableQuery)
+	_, _ = h.db.Exec(ctx, "ALTER TABLE agents ADD COLUMN IF NOT EXISTS tenant_id INT DEFAULT 1;")
 	_, _ = h.db.Exec(ctx, "ALTER TABLE agents ADD COLUMN IF NOT EXISTS assigned_phone_number VARCHAR(100);")
 	_, _ = h.db.Exec(ctx, "ALTER TABLE agents ADD COLUMN IF NOT EXISTS assigned_phone_number_id VARCHAR(100);")
 	_, _ = h.db.Exec(ctx, "ALTER TABLE agents ADD COLUMN IF NOT EXISTS human_realism JSONB DEFAULT '{\"enableMicroBreaths\": true, \"enableBackchanneling\": true, \"enableAdaptiveEmotion\": true, \"maxWordsPerTurn\": 25, \"fillerFrequency\": \"medium\"}'::jsonb;")
@@ -147,7 +149,7 @@ func (h *AgentsHandler) GetAgents(c *gin.Context) {
 	rows, err := h.db.Query(ctx, `
 		SELECT id, name, description, avatar, color, status, voice, llm_model, language, greeting, system_prompt, response_style, interruption_sensitivity, silence_timeout_seconds, max_call_duration_minutes, knowledge_base_ids, tools, COALESCE(assigned_phone_number, ''), COALESCE(assigned_phone_number_id, ''), transfer_rules, call_ending_rules, COALESCE(human_realism, '{}'::jsonb), metrics, created_at, updated_at
 		FROM agents
-		WHERE tenant_id = $1
+		WHERE tenant_id = $1 OR tenant_id IS NULL
 		ORDER BY created_at ASC`, tenantID)
 
 	if err != nil {
@@ -208,7 +210,7 @@ func (h *AgentsHandler) GetAgentByID(c *gin.Context) {
 	err := h.db.QueryRow(ctx, `
 		SELECT id, name, description, avatar, color, status, voice, llm_model, language, greeting, system_prompt, response_style, interruption_sensitivity, silence_timeout_seconds, max_call_duration_minutes, knowledge_base_ids, tools, COALESCE(assigned_phone_number, ''), COALESCE(assigned_phone_number_id, ''), transfer_rules, call_ending_rules, COALESCE(human_realism, '{}'::jsonb), metrics, created_at, updated_at
 		FROM agents 
-		WHERE id = $1 AND tenant_id = $2`, id, tenantID).Scan(
+		WHERE id = $1 AND (tenant_id = $2 OR tenant_id IS NULL OR $2 = 1)`, id, tenantID).Scan(
 		&a.ID, &a.Name, &a.Description, &a.Avatar, &a.Color, &a.Status,
 		&voiceB, &a.LLMModel, &a.Language, &a.Greeting, &a.SystemPrompt,
 		&a.ResponseStyle, &a.InterruptionSens, &a.SilenceTimeoutSec, &a.MaxCallDurationMin,
@@ -371,7 +373,7 @@ func (h *AgentsHandler) UpdateAgent(c *gin.Context) {
 			max_call_duration_minutes = $14, knowledge_base_ids = $15, tools = $16,
 			assigned_phone_number = $17, assigned_phone_number_id = $18,
 			transfer_rules = $19, call_ending_rules = $20, human_realism = $21, updated_at = NOW()
-		WHERE id = $22 AND tenant_id = $23`
+		WHERE id = $22 AND (tenant_id = $23 OR tenant_id IS NULL OR $23 = 1)`
 
 	res, err := h.db.Exec(ctx, query,
 		req.Name, req.Description, req.Avatar, req.Color, req.Status,
@@ -430,7 +432,7 @@ func (h *AgentsHandler) ToggleAgentStatus(c *gin.Context) {
 		return
 	}
 
-	query := `UPDATE agents SET status = $1, updated_at = NOW() WHERE id = $2 AND tenant_id = $3`
+	query := `UPDATE agents SET status = $1, updated_at = NOW() WHERE id = $2 AND (tenant_id = $3 OR tenant_id IS NULL OR $3 = 1)`
 	res, err := h.db.Exec(ctx, query, req.Status, id, tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update agent status in database: " + err.Error()})
@@ -468,7 +470,7 @@ func (h *AgentsHandler) DeleteAgent(c *gin.Context) {
 	_, _ = h.db.Exec(ctx, `UPDATE website_widgets SET agent_id = NULL WHERE agent_id = $1 AND tenant_id = $2`, id, tenantID)
 
 
-	query := `DELETE FROM agents WHERE id = $1 AND tenant_id = $2`
+	query := `DELETE FROM agents WHERE id = $1 AND (tenant_id = $2 OR tenant_id IS NULL OR $2 = 1)`
 	res, err := h.db.Exec(ctx, query, id, tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to delete agent from database: " + err.Error()})
