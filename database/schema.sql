@@ -513,3 +513,76 @@ ON CONFLICT (id) DO UPDATE SET
     latency_avg_ms = EXCLUDED.latency_avg_ms,
     description = EXCLUDED.description,
     status = EXCLUDED.status;
+
+-- Default Telephony Phone Number Seeding
+INSERT INTO phone_numbers (
+    id, tenant_id, number, friendly_name, country, assigned_agent_id, assigned_campaign_id, status, monthly_cost
+) VALUES (
+    'pn-6c65d8c8', 1, '+14153845276', 'Inbound DID (MILL VALLEY)', 'US', 'agent-solar-1', 'Direct Inbound', 'active', 2.50
+) ON CONFLICT (id) DO UPDATE SET
+    tenant_id = 1,
+    assigned_agent_id = 'agent-solar-1',
+    status = 'active';
+
+-- Default Marcus Voice Agent Seeding
+INSERT INTO agents (
+    id, name, description, avatar, color, status, greeting, system_prompt, assigned_phone_number, assigned_phone_number_id, knowledge_base_ids
+) VALUES (
+    'agent-solar-1',
+    'Marcus (Solar Advisor)',
+    'Empathetic inbound and outbound solar consultant specializing in residential solar and battery storage.',
+    'solar-advisor',
+    '#3157D5',
+    'active',
+    'Hello, this is Marcus with Apex Solar Solutions. How can I assist you with your home clean energy options today?',
+    'You are Marcus, an empathetic solar consultant. Answer caller inquiries professionally using linked knowledge documents and schedule consultations.',
+    '+1 (415) 384-5276',
+    'pn-6c65d8c8',
+    '["kb-enterprise-faq", "kb-pricing-2026", "kb-support-returns"]'::jsonb
+) ON CONFLICT (id) DO UPDATE SET
+    status = 'active',
+    assigned_phone_number = '+1 (415) 384-5276',
+    assigned_phone_number_id = 'pn-6c65d8c8';
+
+-- Default Appointments Seeding
+INSERT INTO appointments (
+    appointment_id, caller_name, phone, email, scheduled_at, duration_minutes, status, calendar_type, agent_name, notes
+) VALUES 
+(
+    'apt-live-101',
+    'Jonathan Vance',
+    '+1 (415) 890-2341',
+    'jonathan.vance@solarenergy.org',
+    NOW() + INTERVAL '1 day',
+    30,
+    'confirmed',
+    'google',
+    'Marcus (Solar Advisor)',
+    'Homeowner qualified via AI voice inbound call. Interested in 12kW system with dual battery backup.'
+),
+(
+    'apt-live-102',
+    'Sarah Lin',
+    '+1 (310) 456-7890',
+    'sarah.lin@apexvoice.io',
+    NOW() + INTERVAL '2 days',
+    45,
+    'confirmed',
+    'google',
+    'Marcus (Solar Advisor)',
+    'Follow-up solar demo. Roof structural analysis and ROI forecast to be presented.'
+),
+(
+    'apt-live-103',
+    'David Miller',
+    '+1 (212) 345-6789',
+    'david.m@cleanpower.net',
+    NOW() - INTERVAL '1 day',
+    30,
+    'completed',
+    'google',
+    'Marcus (Solar Advisor)',
+    'Initial consultation completed. Financing options and federal tax credit breakdown sent.'
+)
+ON CONFLICT (appointment_id) DO NOTHING;
+
