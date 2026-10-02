@@ -96,9 +96,9 @@ export function LanguageSelector({
         translate="no"
         onClick={() => setIsOpen((prev) => !prev)}
         className="notranslate flex items-center gap-1.5 px-3 py-1.5 bg-white/15 hover:bg-white/25 border border-white/20 rounded-xl text-xs font-bold text-white transition-all shadow-2xs cursor-pointer focus:outline-hidden"
-        title="Select Language"
+        title={`Selected Language: ${activeLang.name} (${activeLang.nativeName})`}
       >
-        <Globe className="w-3.5 h-3.5 text-white/90 shrink-0" />
+        <span className="text-sm shrink-0 leading-none">{activeLang.flag}</span>
         <span className="font-semibold">{activeLang.name}</span>
         <ChevronDown className={`w-3 h-3 text-white/80 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>

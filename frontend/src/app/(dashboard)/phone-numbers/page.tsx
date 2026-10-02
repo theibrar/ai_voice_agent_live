@@ -246,10 +246,15 @@ export default function PhoneNumbersPage() {
                     <h3 className="text-base font-bold font-mono text-[#0F172A]">{pn.formattedNumber || pn.number}</h3>
                     <p className="text-xs text-[#64748B] mt-0.5">{pn.friendlyName}</p>
                   </div>
-                  <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#EEF2FD] text-[#3157D5] flex items-center gap-1">
-                    <span className="w-1.5 h-1.5 rounded-full bg-[#3157D5] animate-pulse" />
-                    {pn.status}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                      Step 3/3 Active
+                    </span>
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#EEF2FD] text-[#3157D5] flex items-center gap-1">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#3157D5] animate-pulse" />
+                      {pn.status}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Routing detail */}
@@ -525,6 +530,22 @@ export default function PhoneNumbersPage() {
               >
                 <X className="w-4 h-4" />
               </button>
+            </div>
+
+            {/* 3-Step Phone Routing Architecture */}
+            <div className="grid grid-cols-3 gap-2 py-2 px-3 bg-[#EEF2FD]/60 border border-[#3157D5]/20 rounded-2xl text-[10px]">
+              <div className="flex flex-col items-center text-center">
+                <span className="font-extrabold text-[#3157D5]">Step 1: DID</span>
+                <span className="text-[#64748B]">Telnyx Carrier</span>
+              </div>
+              <div className="flex flex-col items-center text-center">
+                <span className="font-extrabold text-[#3157D5]">Step 2: AI Voice</span>
+                <span className="text-[#64748B]">Agent Binding</span>
+              </div>
+              <div className="flex flex-col items-center text-center">
+                <span className="font-extrabold text-[#3157D5]">Step 3: SIP Trunk</span>
+                <span className="text-[#64748B]">LiveKit & RAG</span>
+              </div>
             </div>
 
             <form onSubmit={handleSaveRouting} className="space-y-3.5 text-xs">

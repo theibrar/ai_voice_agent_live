@@ -195,7 +195,7 @@ export default function AppointmentsPage() {
   const [newLeadPhone, setNewLeadPhone] = useState("");
   const [newLeadEmail, setNewLeadEmail] = useState("");
   const [newAgentName, setNewAgentName] = useState(agents && agents.length > 0 ? agents[0].name : "");
-  const [newDateStr, setNewDateStr] = useState("2026-08-05");
+  const [newDateStr, setNewDateStr] = useState(new Date().toISOString().substring(0, 10));
   const [newTimeStr, setNewTimeStr] = useState("09:00");
   const [newNotes, setNewNotes] = useState("");
 
@@ -558,6 +558,14 @@ export default function AppointmentsPage() {
               className="px-3.5 py-1.5 rounded-xl border border-[#E2E8F0] hover:bg-[#F8FAFC] text-xs font-bold text-[#0F172A] transition-colors cursor-pointer shadow-2xs"
             >
               Today
+            </button>
+
+            <button
+              onClick={() => setCurrentDate(new Date(2026, 9, 1))}
+              className="px-2.5 py-1.5 rounded-xl border border-[#3157D5]/30 bg-[#EEF2FD] text-xs font-bold text-[#3157D5] hover:bg-[#3157D5] hover:text-white transition-colors cursor-pointer shadow-2xs"
+              title="Jump to October 2026 Bookings"
+            >
+              Oct 2026
             </button>
 
             <button
