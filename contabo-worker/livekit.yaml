@@ -35,5 +35,6 @@ room:
   departure_timeout: 30
 
 limit:
-  num_tracks: 2             # 1 inbound (caller) + 1 outbound (agent)
+  num_tracks: 2000          # High capacity for concurrent calls
+
 
