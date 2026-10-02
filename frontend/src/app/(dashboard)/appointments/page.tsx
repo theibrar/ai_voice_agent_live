@@ -335,9 +335,9 @@ export default function AppointmentsPage() {
       // Search query
       if (searchQuery.trim()) {
         const query = searchQuery.toLowerCase();
-        const matchName = apt.contactName.toLowerCase().includes(query);
-        const matchPhone = apt.contactPhone.toLowerCase().includes(query);
-        const matchAgent = apt.agentName.toLowerCase().includes(query);
+        const matchName = (apt.contactName || (apt as any).callerName || "").toLowerCase().includes(query);
+        const matchPhone = (apt.contactPhone || (apt as any).phone || "").toLowerCase().includes(query);
+        const matchAgent = (apt.agentName || "").toLowerCase().includes(query);
         if (!matchName && !matchPhone && !matchAgent) return false;
       }
 

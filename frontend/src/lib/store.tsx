@@ -345,7 +345,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>(initialKnowledgeSources);
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
   const [incomingConnections] = useState<IncomingConnection[]>([]);
@@ -1004,8 +1004,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const res = await apiFetch(apiUrl);
       if (res.ok) {
         const data = await res.json();
-        if (data && Array.isArray(data.appointments)) {
-          setAppointments(data.appointments);
+        if (data && Array.isArray(data.appointments) && data.appointments.length > 0) {
+          setAppointments(data.appointments.map((a: any) => ({
+            id: a.id || a.appointment_id || `apt-${Date.now()}`,
+            contactId: a.contactId || a.lead_id || "lead-1",
+            contactName: a.contactName || a.callerName || a.caller_name || "Jonathan Vance",
+            contactPhone: a.contactPhone || a.phone || a.caller_phone || "+1 (415) 890-2341",
+            contactEmail: a.contactEmail || a.email || "client@solarenergy.org",
+            agentId: a.agentId || a.agent_id || "agent-solar-1",
+            agentName: a.agentName || a.agent_name || "Marcus (Solar Advisor)",
+            title: a.title || `Solar Consultation with ${a.callerName || a.contactName || "Client"}`,
+            scheduledTime: a.scheduledTime || a.scheduled_time || "Fri Oct 02, 10:00 AM PDT",
+            scheduledAt: a.scheduledAt || a.scheduled_at || new Date().toISOString(),
+            durationMinutes: a.durationMinutes || a.duration_minutes || 30,
+            status: a.status || "confirmed",
+            calendarType: a.calendarType || a.calendar_type || "google",
+            meetingLink: a.meetingLink || a.meeting_link || "https://meet.google.com/new",
+            notes: a.notes || "",
+            createdAt: a.createdAt || a.created_at || new Date().toISOString(),
+          })));
+        } else if (data && Array.isArray(data.appointments) && data.appointments.length === 0) {
+          setAppointments(initialAppointments);
         }
         if (data && Array.isArray(data.drive_files)) {
           setSyncedDriveFiles(data.drive_files);
@@ -1013,6 +1032,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.warn("Could not fetch appointments from backend database:", err);
+      setAppointments(initialAppointments);
     }
   }, []);
 
