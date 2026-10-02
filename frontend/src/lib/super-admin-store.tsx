@@ -183,6 +183,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
   const [tenants, setTenants] = useState<TenantAdminOrg[]>(initialTenantOrgs);
   const [plans, setPlans] = useState<PlatformPlan[]>(initialPlatformPlans);
   const [gateways, setGateways] = useState<GatewayConfig[]>([]);
+  const [sipCarriers, setSipCarriers] = useState<SipCarrierNetwork[]>([]);
   const defaultMasterEngines: VoiceAiEngine[] = [
     {
       id: "eng-vllm-qwen",
