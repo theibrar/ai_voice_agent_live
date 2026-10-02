@@ -249,7 +249,22 @@ class CallSession:
                     self.agent_name    = d.get("agent_name")    or self.agent_name
                     self.system_prompt = d.get("system_prompt") or self.system_prompt
                     self.greeting      = d.get("greeting")      or self.greeting
-                    self.voice_name    = d.get("voice")         or self.voice_name
+
+                    # Clean voiceId string extraction (never allow raw JSON string as voice name)
+                    raw_voice = d.get("voice")
+                    if isinstance(raw_voice, dict):
+                        self.voice_name = raw_voice.get("voiceId") or raw_voice.get("voice_id") or "af_bella"
+                    elif isinstance(raw_voice, str) and ("{" in raw_voice or "voiceId" in raw_voice):
+                        try:
+                            v_parsed = json.loads(raw_voice)
+                            self.voice_name = v_parsed.get("voiceId") or v_parsed.get("voice_id") or "af_bella"
+                        except Exception:
+                            self.voice_name = "af_bella"
+                    elif raw_voice and isinstance(raw_voice, str) and raw_voice.strip():
+                        self.voice_name = raw_voice.strip()
+                    else:
+                        self.voice_name = "af_bella"
+
                     self.voice_speed   = float(d.get("voice_speed", 1.0))
                     self.tenant_id     = d.get("tenant_id", 1)
                     logger.success(
@@ -418,7 +433,7 @@ async def execute_tool(name: str, args: Dict[str, Any], cs: CallSession) -> str:
 # STT  (Faster-Whisper distil-large-v3 on GPU)
 # ─────────────────────────────────────────────────────────────────────────────
 async def transcribe(audio_bytes: bytes) -> str:
-    if len(audio_bytes) < 6400:
+    if len(audio_bytes) < 2400:
         return ""
     sess = await get_session()
     form = aiohttp.FormData()
@@ -435,8 +450,13 @@ async def transcribe(audio_bytes: bytes) -> str:
                 text = data.get("text", "").strip()
                 ms   = round((time.time() - t0) * 1000, 1)
                 if text:
-                    logger.info(f"STT {ms}ms -> \"{text}\"")
+                    logger.info(f"STT ({ms}ms) -> \"{text}\"")
+                else:
+                    logger.info(f"STT ({ms}ms) -> (no speech detected in chunk)")
                 return text
+            else:
+                err_body = await r.text()
+                logger.error(f"STT HTTP {r.status}: {err_body}")
     except Exception as e:
         logger.error(f"STT error: {e}")
     return ""
@@ -570,7 +590,17 @@ async def tts_stream_pcm(
 ) -> AsyncGenerator[bytes, None]:
     if not text.strip():
         return
-    payload = {"text": text, "voice": voice, "speed": speed}
+
+    clean_voice = voice
+    if "{" in clean_voice or "voiceId" in clean_voice:
+        try:
+            clean_voice = json.loads(clean_voice).get("voiceId", "af_bella")
+        except Exception:
+            clean_voice = "af_bella"
+    if not clean_voice:
+        clean_voice = "af_bella"
+
+    payload = {"text": text, "voice": clean_voice, "speed": speed}
     t0      = time.time()
     logged  = False
     try:
@@ -582,14 +612,15 @@ async def tts_stream_pcm(
                 "Content-Type":  "application/json",
             },
         ) as r:
-            if r.status != 200:
-                logger.error(f"TTS /stream {r.status}")
+            if r.status == 200:
+                async for chunk in r.content.iter_chunked(1920):  # 20ms @ 24kHz mono PCM16
+                    if not logged:
+                        logger.info(f"TTS TTFA {round((time.time() - t0) * 1000, 1)}ms | Voice: {clean_voice}")
+                        logged = True
+                    yield chunk
                 return
-            async for chunk in r.content.iter_chunked(1920):  # 20ms @ 24kHz mono PCM16
-                if not logged:
-                    logger.info(f"TTS TTFA {round((time.time() - t0) * 1000, 1)}ms")
-                    logged = True
-                yield chunk
+            else:
+                logger.warning(f"TTS /stream returned {r.status}, attempting /v1/audio/speech fallback...")
     except Exception as e:
         logger.error(f"TTS error: {e}")
 
@@ -706,13 +737,14 @@ async def entrypoint(ctx: JobContext):
                 sample_rate = ev.frame.sample_rate or 16000
                 energy = pcm_energy(raw)
 
-                # Telephone voice energy detection (850 threshold)
-                if energy > 850:
+                # Telephone voice energy detection (lowered to 250 for telephone/cellular audio)
+                if energy > 250:
                     consecutive_speech += 1
-                    # Require at least 3 frames (~60ms) of sustained energy to avoid line clicks
-                    if consecutive_speech >= 3:
+                    # Require 2 frames (~40ms) of voice energy to trigger
+                    if consecutive_speech >= 2:
                         if not speaking:
                             speaking = True
+                            logger.info(f"Caller speech started (energy: {energy})")
                             # Don't false-interrupt during the first 1.2s of greeting
                             if time.time() - greeting_start_time > 1.2:
                                 cs.barge_in.set()
@@ -723,11 +755,12 @@ async def entrypoint(ctx: JobContext):
                     if speaking:
                         pcm_buf.extend(raw)
                         silence_frames += 1
-                        # 25 frames @ 20ms = ~500ms silence ends user turn
-                        if silence_frames >= 25:
+                        # 20 frames @ 20ms = ~400ms silence ends user turn
+                        if silence_frames >= 20:
                             speaking = False
-                            # Only transcribe if audio is longer than 350ms
-                            min_bytes = int(sample_rate * 0.35 * 2)
+                            logger.info(f"Caller speech ended ({len(pcm_buf)} bytes). Sending to STT...")
+                            # Transcribe if audio is longer than 250ms
+                            min_bytes = int(sample_rate * 0.25 * 2)
                             if len(pcm_buf) > min_bytes:
                                 wav = pcm16_to_wav(bytes(pcm_buf), sample_rate=sample_rate)
                                 try:
