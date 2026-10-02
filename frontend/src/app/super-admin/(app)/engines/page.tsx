@@ -60,10 +60,12 @@ export default function SuperAdminEnginesPage() {
   const [selectedTenantId, setSelectedTenantId] = useState(tenants[0]?.id || "");
   const [probingId, setProbingId] = useState<string | null>(null);
   const [engineHealthMap, setEngineHealthMap] = useState<Record<string, { online: boolean; latencyMs: number }>>({
-    "eng-vllm-qwen": { online: true, latencyMs: 45 },
+    "eng-vllm-qwen": { online: true, latencyMs: 95 },
     "eng-kokoro-tts": { online: true, latencyMs: 45 },
-    "eng-whisper-stt": { online: true, latencyMs: 180 },
+    "eng-parakeet-stt": { online: true, latencyMs: 110 },
+    "eng-whisper-stt": { online: true, latencyMs: 110 },
     "eng-vad-silero": { online: true, latencyMs: 5 },
+    "eng-prosody-testbench": { online: true, latencyMs: 50 },
   });
 
   const handleProbeEngine = async (engine: VoiceAiEngine) => {
@@ -89,12 +91,12 @@ export default function SuperAdminEnginesPage() {
       category: "llm" as const,
       provider: "OpenAI-Compatible vLLM",
       modelIdentifier: "Qwen/Qwen2.5-7B-Instruct-AWQ",
-      baseUrl: "http://77.54.200.11:15219/v1",
+      baseUrl: "http://77.104.167.149:59982/v1",
       apiKey: "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
-      latencyAvgMs: 45,
+      latencyAvgMs: 95,
       costPerUnit: "$0.00 / Self-Hosted GPU",
       tierRequirement: "all" as const,
-      description: "Production vLLM OpenAI-Compatible high-throughput inference engine running on NVIDIA RTX 4060 Ti (16GB VRAM).",
+      description: "Production vLLM OpenAI-Compatible high-throughput inference engine running on Master GPU Cluster (Port 59982).",
     },
     // TTS
     {
@@ -103,26 +105,26 @@ export default function SuperAdminEnginesPage() {
       category: "tts" as const,
       provider: "Kokoro ONNX Neural",
       modelIdentifier: "kokoro-82m",
-      baseUrl: "http://77.54.200.11:15137",
+      baseUrl: "http://77.104.167.149:59643",
       apiKey: "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
       latencyAvgMs: 45,
       costPerUnit: "$0.00 / Self-Hosted GPU",
       tierRequirement: "all" as const,
-      description: "Sub-45ms ultra-fast ONNX neural voice synthesizer with 24kHz 16-bit PCM output. Supported voices: af_bella, af_sarah, am_adam, am_michael, bf_emma, bm_george.",
+      description: "Sub-45ms ultra-fast ONNX neural voice synthesizer (Port 59643) with 24kHz 16-bit PCM output. Supported voices: af_bella, af_sarah, am_adam, am_michael.",
     },
     // STT
     {
-      label: "🎙️ Faster-Whisper STT (GPU Live)",
-      name: "Faster-Whisper CUDA Streaming Transcriber",
+      label: "🎙️ Parakeet-TDT STT (GPU Live)",
+      name: "Parakeet-TDT Neural Streaming Transcriber",
       category: "stt" as const,
-      provider: "Faster-Whisper CUDA",
-      modelIdentifier: "distil-large-v3",
-      baseUrl: "http://77.54.200.11:15203",
+      provider: "Parakeet-TDT CUDA",
+      modelIdentifier: "parakeet-tdt-0.6b-en",
+      baseUrl: "http://77.104.167.149:59805",
       apiKey: "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
-      latencyAvgMs: 180,
+      latencyAvgMs: 110,
       costPerUnit: "$0.00 / Self-Hosted GPU",
       tierRequirement: "all" as const,
-      description: "CUDA float16 distil-large-v3 streaming speech-to-text with sub-200ms latency and WebSocket streaming on NVIDIA RTX 4060 Ti.",
+      description: "Real-time Parakeet-TDT neural streaming speech-to-text (Port 59805) with sub-120ms latency and high-accuracy transcription.",
     },
     // VAD
     {
@@ -131,12 +133,26 @@ export default function SuperAdminEnginesPage() {
       category: "stt" as const,
       provider: "Silero Neural VAD",
       modelIdentifier: "silero-vad-v5",
-      baseUrl: "http://77.54.200.11:15290",
+      baseUrl: "http://77.104.167.149:59929",
       apiKey: "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
       latencyAvgMs: 5,
       costPerUnit: "$0.00 / Self-Hosted GPU",
       tierRequirement: "all" as const,
-      description: "Sub-5ms caller interruption / barge-in neural chunk monitor with 16 kHz sample rate, 512 samples per frame (32ms window).",
+      description: "Sub-5ms caller interruption / barge-in neural chunk monitor (Port 59929) with 16 kHz sample rate, 512 samples per frame (32ms window).",
+    },
+    // Gradio Testbench
+    {
+      label: "🎛️ Gradio Prosody Testbench (GPU Live)",
+      name: "Gradio Human Prosody Testbench",
+      category: "tts" as const,
+      provider: "Gradio Testbench",
+      modelIdentifier: "human-prosody-testbench",
+      baseUrl: "http://77.104.167.149:59835",
+      apiKey: "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
+      latencyAvgMs: 50,
+      costPerUnit: "$0.00 / Self-Hosted GPU",
+      tierRequirement: "all" as const,
+      description: "Interactive Browser UI (Port 59835) for human prosody and voice testing.",
     },
   ];
 
@@ -553,7 +569,7 @@ export default function SuperAdminEnginesPage() {
                   Quick Presets (1-Click Auto Configure)
                 </span>
                 <span className="text-[10px] font-mono text-emerald-600 font-bold bg-emerald-50 px-2.5 py-0.5 rounded-lg border border-emerald-200">
-                  RTX 4060 Ti • 77.54.200.11
+                  GPU Cluster • 77.104.167.149
                 </span>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -680,10 +696,10 @@ export default function SuperAdminEnginesPage() {
                       required
                       placeholder={
                         category === "tts"
-                          ? "http://77.54.200.11:15137"
+                          ? "http://77.104.167.149:59643"
                           : category === "stt"
-                          ? "http://77.54.200.11:15203 or http://77.54.200.11:15290"
-                          : "http://77.54.200.11:15219/v1 or http://localhost:11434/v1"
+                          ? "http://77.104.167.149:59805 or http://77.104.167.149:59929"
+                          : "http://77.104.167.149:59982/v1"
                       }
                       value={baseUrl}
                       onChange={(e) => setBaseUrl(e.target.value)}

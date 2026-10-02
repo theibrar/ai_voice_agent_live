@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
 
     const lastUserMessage = messages[messages.length - 1]?.content || "";
 
-    const vllmBaseUrl = process.env.VLLM_BASE_URL || "http://77.54.200.11:15219/v1";
+    const vllmBaseUrl = process.env.VLLM_BASE_URL || "http://77.104.167.149:59982/v1";
     const vllmApiKey = process.env.VLLM_API_KEY || "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF";
 
     let replyText = "";

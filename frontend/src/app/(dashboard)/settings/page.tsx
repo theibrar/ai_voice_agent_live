@@ -84,12 +84,12 @@ export default function SettingsPage() {
     }
   }, [user, tenant]);
 
-  // Dedicated GPU Microservices Stack (77.54.200.11)
+  // Dedicated GPU Microservices Stack (77.104.167.149)
   const [vllmModel, setVllmModel] = useState("Qwen/Qwen2.5-7B-Instruct-AWQ");
   const [ttsModel, setTtsModel] = useState("kokoro-82m");
   const [ttsVoice, setTtsVoice] = useState("af_bella");
   const [ttsSpeed, setTtsSpeed] = useState("1.0x");
-  const [sttModel, setSttModel] = useState("distil-large-v3");
+  const [sttModel, setSttModel] = useState("parakeet-tdt-0.6b-en");
   const [sttLanguage, setSttLanguage] = useState("English (US)");
 
   // Webhooks Management Modal
@@ -385,8 +385,8 @@ export default function SettingsPage() {
                   <Cpu className="w-5 h-5" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-[#0F172A]">Dedicated Live GPU Microservices Stack (77.54.200.11)</h3>
-                  <p className="text-[#64748B] text-[11px]">Real-time pipeline: Faster-Whisper STT (distil-large-v3) → vLLM Qwen 2.5 7B Instruct AWQ → Kokoro-82M ONNX Neural TTS</p>
+                  <h3 className="font-bold text-[#0F172A]">Dedicated Live GPU Microservices Stack (77.104.167.149)</h3>
+                  <p className="text-[#64748B] text-[11px]">Real-time pipeline: Parakeet-TDT STT → vLLM Qwen 2.5 7B Instruct AWQ → Kokoro-82M ONNX Neural TTS</p>
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -432,7 +432,7 @@ export default function SettingsPage() {
                   <label className="block font-bold text-[#0F172A] mb-1">GPU Base URL Endpoint</label>
                   <input
                     type="text"
-                    defaultValue="http://77.54.200.11:15219/v1"
+                    defaultValue="http://77.104.167.149:59982/v1"
                     readOnly
                     className="w-full px-3 py-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl font-mono text-xs text-[#0F172A] outline-none"
                   />
@@ -494,7 +494,7 @@ export default function SettingsPage() {
                   <label className="block font-bold text-[#0F172A] mb-1">GPU Base URL Endpoint</label>
                   <input
                     type="text"
-                    defaultValue="http://77.54.200.11:15137"
+                    defaultValue="http://77.104.167.149:59643"
                     readOnly
                     className="w-full px-3 py-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl font-mono text-xs text-[#0F172A] outline-none"
                   />
@@ -541,22 +541,22 @@ export default function SettingsPage() {
               </div>
             </div>
 
-            {/* 3. Faster-Whisper STT Engine Card */}
+            {/* 3. Parakeet-TDT STT Engine Card */}
             <div className="p-5 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] space-y-4 hover:border-[#3157D5]/40 transition-colors">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-[#E2E8F0]">
                 <div>
                   <div className="flex items-center gap-2">
-                    <h4 className="font-bold text-sm text-[#0F172A]">Faster-Whisper CUDA Streaming Transcriber</h4>
+                    <h4 className="font-bold text-sm text-[#0F172A]">Parakeet-TDT Neural Streaming Transcriber</h4>
                     <span className="px-2 py-0.5 text-[10px] font-bold bg-emerald-100 text-emerald-800 rounded-full">
-                      distil-large-v3
+                      parakeet-tdt-0.6b-en
                     </span>
                   </div>
-                  <p className="text-[11px] text-[#64748B]">CUDA float16 distil-large-v3 streaming speech-to-text with sub-180ms latency and high word recognition accuracy</p>
+                  <p className="text-[11px] text-[#64748B]">CUDA Parakeet-TDT neural streaming speech-to-text with sub-120ms latency and high word recognition accuracy</p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <span className="text-[10px] font-mono text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full font-bold">
-                    Online • Sub-180ms Streaming
+                    Online • Sub-120ms Streaming
                   </span>
                 </div>
               </div>
@@ -569,6 +569,7 @@ export default function SettingsPage() {
                     onChange={(e) => setSttModel(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-[#CBD5E1] rounded-xl font-bold text-xs text-[#0F172A] outline-none focus:border-[#3157D5]"
                   >
+                    <option value="parakeet-tdt-0.6b-en">Parakeet-TDT 0.6B (CUDA Streaming)</option>
                     <option value="distil-large-v3">Faster-Whisper distil-large-v3 (CUDA float16)</option>
                   </select>
                 </div>
@@ -577,7 +578,7 @@ export default function SettingsPage() {
                   <label className="block font-bold text-[#0F172A] mb-1">GPU Base URL Endpoint</label>
                   <input
                     type="text"
-                    defaultValue="http://77.54.200.11:15203"
+                    defaultValue="http://77.104.167.149:59805"
                     readOnly
                     className="w-full px-3 py-2 bg-[#F1F5F9] border border-[#CBD5E1] rounded-xl font-mono text-xs text-[#0F172A] outline-none"
                   />

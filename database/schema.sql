@@ -427,8 +427,8 @@ CREATE TABLE IF NOT EXISTS google_sheet_rows (
     created_at TIMESTAMPTZ DEFAULT NOW(),
     synced_at TIMESTAMPTZ DEFAULT NOW()
 );
--- Seed 3 Master Live GPU AI Microservices (Purging any obsolete engines)
-DELETE FROM ai_engines WHERE id NOT IN ('eng-vllm-qwen', 'eng-kokoro-tts', 'eng-whisper-stt');
+-- Seed Master Live GPU AI Microservices (Host: 77.104.167.149)
+DELETE FROM ai_engines WHERE id NOT IN ('eng-vllm-qwen', 'eng-kokoro-tts', 'eng-parakeet-stt', 'eng-whisper-stt', 'eng-vad-silero', 'eng-prosody-testbench');
 
 INSERT INTO ai_engines (
     id, engine_name, provider, engine_type, model_identifier, endpoint_url,
@@ -441,14 +441,14 @@ INSERT INTO ai_engines (
     'vLLM OpenAI-Compatible',
     'llm',
     'Qwen/Qwen2.5-7B-Instruct-AWQ',
-    'http://77.54.200.11:15219/v1',
+    'http://77.104.167.149:59982/v1',
     'IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF',
     'all',
-    110,
+    95,
     '$0.10 / 1M tokens',
     true,
     true,
-    'Self-hosted private GPU cluster running vLLM OpenAI-compatible REST server with Qwen 2.5 7B Instruct AWQ.',
+    'Self-hosted master GPU cluster running vLLM OpenAI-compatible REST server (Port 59982) with Qwen 2.5 7B Instruct AWQ.',
     'active',
     CURRENT_TIMESTAMP
 ),
@@ -458,31 +458,31 @@ INSERT INTO ai_engines (
     'Kokoro-82M ONNX',
     'tts',
     'kokoro-82m',
-    'http://77.54.200.11:15137',
+    'http://77.104.167.149:59643',
     'IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF',
     'all',
     45,
     '$0.005 / 1K chars',
     true,
     true,
-    'Ultra-low ~45ms latency ONNX TTS engine with 82M parameters. 24 kHz, 16-bit Mono PCM WAV.',
+    'Ultra-low ~45ms latency ONNX TTS engine (Port 59643) with 82M parameters. 24 kHz, 16-bit Mono PCM WAV.',
     'active',
     CURRENT_TIMESTAMP
 ),
 (
-    'eng-whisper-stt',
-    'Faster-Whisper CUDA Streaming Transcriber',
-    'Faster-Whisper CUDA',
+    'eng-parakeet-stt',
+    'Parakeet-TDT Neural Streaming Transcriber',
+    'Parakeet-TDT CUDA',
     'stt',
-    'distil-large-v3',
-    'http://77.54.200.11:15203',
+    'parakeet-tdt-0.6b-en',
+    'http://77.104.167.149:59805',
     'IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF',
     'all',
-    180,
+    110,
     '$0.003 / min',
     true,
     true,
-    'Real-time distil-large-v3 model on NVIDIA CUDA (float16) with entity extraction and websocket streaming.',
+    'Real-time Parakeet-TDT neural streaming STT on NVIDIA CUDA (Port 59805) with sub-120ms latency and high-accuracy transcription.',
     'active',
     CURRENT_TIMESTAMP
 ),
@@ -492,14 +492,31 @@ INSERT INTO ai_engines (
     'Silero VAD GPU Microservice',
     'stt',
     'silero-vad-v5',
-    'http://77.54.200.11:15290',
+    'http://77.104.167.149:59929',
     'IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF',
     'all',
     5,
     '$0.00 / Self-Hosted GPU',
     true,
     false,
-    'Sub-5ms caller interruption / barge-in neural chunk monitor with 16 kHz sample rate, 512 samples per frame (32ms window).',
+    'Sub-5ms caller interruption / barge-in neural chunk monitor (Port 59929) with 16 kHz sample rate, 512 samples per frame.',
+    'active',
+    CURRENT_TIMESTAMP
+),
+(
+    'eng-prosody-testbench',
+    'Gradio Human Prosody Testbench',
+    'Gradio Testbench',
+    'tts',
+    'human-prosody-testbench',
+    'http://77.104.167.149:59835',
+    'IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF',
+    'all',
+    50,
+    '$0.00 / Self-Hosted GPU',
+    true,
+    false,
+    'Interactive Browser UI (Port 59835) for human prosody and voice testing.',
     'active',
     CURRENT_TIMESTAMP
 )

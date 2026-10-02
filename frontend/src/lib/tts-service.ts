@@ -36,7 +36,8 @@ export async function playKokoroNeuralAudio(
   const endpoints = [
     "/api/v1/tts/synthesize",
     "/api/tts/synthesize",
-    "http://77.54.200.11:15137/synthesize",
+    "http://77.104.167.149:59643/v1/audio/speech",
+    "http://77.104.167.149:59643/synthesize",
   ];
 
   for (const endpoint of endpoints) {
@@ -100,7 +101,7 @@ export async function playKokoroNeuralAudio(
 
   return {
     success: false,
-    error: "GPU Neural TTS Server (77.54.200.11) is unreachable or offline.",
+    error: "GPU Neural TTS Server (77.104.167.149:59643) is unreachable or offline.",
   };
 }
 
