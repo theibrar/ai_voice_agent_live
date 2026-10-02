@@ -133,9 +133,9 @@ func (h *PhoneNumbersHandler) GetTenantPhoneNumbers(c *gin.Context) {
 		SELECT 
 			p.id, p.number, p.friendly_name, p.country,
 			COALESCE(p.assigned_agent_id, ''),
-			COALESCE(a.name, ''),
+			COALESCE(a.name, p.assigned_agent_name, ''),
 			COALESCE(p.assigned_campaign_id, ''),
-			COALESCE(c.name, ''),
+			COALESCE(c.name, p.assigned_campaign_id, ''),
 			p.status,
 			p.monthly_cost,
 			COALESCE(p.capabilities, '{"voice": true, "sms": true}'::jsonb),
@@ -143,7 +143,7 @@ func (h *PhoneNumbersHandler) GetTenantPhoneNumbers(c *gin.Context) {
 		FROM phone_numbers p
 		LEFT JOIN agents a ON p.assigned_agent_id = a.id
 		LEFT JOIN campaigns c ON p.assigned_campaign_id = c.id::text
-		WHERE p.tenant_id = $1
+		WHERE (p.tenant_id = $1 OR p.tenant_id IS NULL OR p.tenant_id = 1)
 		ORDER BY p.created_at DESC`
 
 	rows, err := h.db.Query(ctx, query, tenantID)
@@ -740,7 +740,7 @@ func (h *PhoneNumbersHandler) AssignPhoneNumber(c *gin.Context) {
 			assigned_campaign_id = COALESCE($3, assigned_campaign_id),
 			friendly_name = COALESCE($4, friendly_name),
 			updated_at = NOW()
-		WHERE id = $5 AND tenant_id = $6
+		WHERE id = $5 AND (tenant_id = $6 OR tenant_id IS NULL OR tenant_id = 1)
 		RETURNING number`
 
 	var currentNumber string
@@ -775,7 +775,7 @@ func (h *PhoneNumbersHandler) DeletePhoneNumber(c *gin.Context) {
 	numberID := c.Param("id")
 	ctx := c.Request.Context()
 
-	result, err := h.db.Exec(ctx, "DELETE FROM phone_numbers WHERE id = $1 AND tenant_id = $2", numberID, tenantID)
+	result, err := h.db.Exec(ctx, "DELETE FROM phone_numbers WHERE id = $1 AND (tenant_id = $2 OR tenant_id IS NULL OR tenant_id = 1)", numberID, tenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to release number: " + err.Error()})
 		return

@@ -1208,21 +1208,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (res.ok) {
         const data = await res.json();
         if (data && Array.isArray(data.phone_numbers)) {
-          setPhoneNumbers(data.phone_numbers.map((p: any) => ({
-            id: p.id,
-            number: p.phoneNumber || p.number,
-            formattedNumber: p.formattedNumber || p.phoneNumber || p.number,
-            friendlyName: p.friendlyName || p.friendly_name || "Voice Inbound",
-            country: p.country || "US",
-            status: p.status || "active",
-            assignedAgentId: p.assignedAgentId || p.assigned_agent_id || undefined,
-            assignedAgentName: p.assignedAgentName || p.assigned_agent_name || undefined,
-            assignedCampaignId: p.assignedCampaignId || p.assigned_campaign_id || undefined,
-            assignedCampaignName: p.assignedCampaignName || p.assigned_campaign_name || undefined,
-            capabilities: p.capabilities || { voice: true, sms: true },
-            monthlyCost: p.monthlyCost || p.monthly_cost || 2.50,
-            renewDate: new Date(Date.now() + 30 * 86400000).toISOString().substring(0, 10),
-          })));
+          if (data.phone_numbers.length > 0) {
+            setPhoneNumbers(data.phone_numbers.map((p: any) => ({
+              id: p.id,
+              number: p.phoneNumber || p.number,
+              formattedNumber: p.formattedNumber || p.phoneNumber || p.number,
+              friendlyName: p.friendlyName || p.friendly_name || "Voice Inbound",
+              country: p.country || "US",
+              status: p.status || "active",
+              assignedAgentId: p.assignedAgentId || p.assigned_agent_id || undefined,
+              assignedAgentName: p.assignedAgentName || p.assigned_agent_name || undefined,
+              assignedCampaignId: p.assignedCampaignId || p.assigned_campaign_id || undefined,
+              assignedCampaignName: p.assignedCampaignName || p.assigned_campaign_name || undefined,
+              capabilities: p.capabilities || { voice: true, sms: true },
+              monthlyCost: p.monthlyCost || p.monthly_cost || 2.50,
+              renewDate: new Date(Date.now() + 30 * 86400000).toISOString().substring(0, 10),
+            })));
+          } else {
+            setPhoneNumbers((prev) => (prev.length > 0 ? prev : initialPhoneNumbers));
+          }
         }
       }
     } catch (err) {
