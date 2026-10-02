@@ -15,11 +15,16 @@ redis:
 sip_port: 5060
 
 # RTP port range (must NOT overlap with LiveKit's 50000-59999)
+rtp_port: 20000-29999
 rtp_port_range_start: 20000
 rtp_port_range_end: 29999
 
+# Announce Contabo/VPS external public IP (150.136.115.51) in SIP SDP
+use_external_ip: true
+
 logging:
-  level: info
+  level: debug
+
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Inbound SIP Rules
