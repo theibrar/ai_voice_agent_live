@@ -85,6 +85,16 @@ type FlexibleEndCallRequest struct {
 	AppointmentBooked bool   `json:"appointment_booked"`
 }
 
+func cleanDigits(s string) string {
+	var b strings.Builder
+	for _, r := range s {
+		if r >= '0' && r <= '9' {
+			b.WriteRune(r)
+		}
+	}
+	return b.String()
+}
+
 // POST /api/v1/calls/start
 func (h *CallsHandler) StartCall(c *gin.Context) {
 	var req FlexibleStartCallRequest
@@ -97,8 +107,10 @@ func (h *CallsHandler) StartCall(c *gin.Context) {
 	}
 
 	tenantID := 1
-	agentName := "Rachel - AI Enterprise SDR"
-	systemPrompt := "You are a professional, friendly, and concise AI sales representative."
+	var agentID string
+	agentName := "Marcus (Solar Advisor)"
+	systemPrompt := "You are Marcus, a warm and expert voice AI consultant at Apex Solutions. You are on a live phone call right now."
+	greeting := "Hello! Thanks for calling Apex Solutions. My name is Marcus. How can I help you today?"
 	voice := "af_bella"
 	voiceSpeed := 1.0
 	llmModel := "Qwen/Qwen2.5-7B-Instruct-AWQ"
@@ -106,14 +118,25 @@ func (h *CallsHandler) StartCall(c *gin.Context) {
 
 	// 1. If called_did is provided, look up assigned agent
 	if req.CalledDID != "" {
-		var aID, aName, sPrompt, vName, lModel string
+		cleanDID := cleanDigits(req.CalledDID)
+		cleanDIDLast10 := cleanDID
+		if len(cleanDID) > 10 {
+			cleanDIDLast10 = cleanDID[len(cleanDID)-10:]
+		}
+
+		var aID, aName, sPrompt, vName, lModel, kbRaw, greet string
 		err := h.dbPool.QueryRow(ctx, `
-			SELECT a.id::text, a.name, COALESCE(a.system_prompt, ''), COALESCE(a.voice::text, 'af_bella'), COALESCE(a.llm_model, 'Qwen/Qwen2.5-7B-Instruct-AWQ')
+			SELECT a.id::text, a.name, COALESCE(a.system_prompt, ''), COALESCE(a.voice::text, 'af_bella'), 
+			       COALESCE(a.llm_model, 'Qwen/Qwen2.5-7B-Instruct-AWQ'), COALESCE(a.knowledge_base_ids::text, '[]'),
+			       COALESCE(a.greeting, '')
 			FROM phone_numbers p
 			JOIN agents a ON p.assigned_agent_id = a.id::text
-			WHERE p.phone_number = $1 OR p.number = $1
-			LIMIT 1`, req.CalledDID).Scan(&aID, &aName, &sPrompt, &vName, &lModel)
+			WHERE p.number = $1 OR p.phone_number = $1
+			   OR regexp_replace(p.number, '[^0-9]', '', 'g') = $2
+			   OR RIGHT(regexp_replace(p.number, '[^0-9]', '', 'g'), 10) = $3
+			LIMIT 1`, req.CalledDID, cleanDID, cleanDIDLast10).Scan(&aID, &aName, &sPrompt, &vName, &lModel, &kbRaw, &greet)
 		if err == nil && aName != "" {
+			agentID = aID
 			agentName = aName
 			if sPrompt != "" {
 				systemPrompt = sPrompt
@@ -124,13 +147,23 @@ func (h *CallsHandler) StartCall(c *gin.Context) {
 			if lModel != "" {
 				llmModel = lModel
 			}
+			if greet != "" {
+				greeting = greet
+			}
+			_ = json.Unmarshal([]byte(kbRaw), &kbIDs)
 		}
-	} else if req.AgentID != "" {
-		var aName, sPrompt, vName, lModel string
+	}
+
+	// 2. If no match by called_did, try agent_id
+	if agentID == "" && req.AgentID != "" {
+		var aName, sPrompt, vName, lModel, kbRaw, greet string
 		err := h.dbPool.QueryRow(ctx, `
-			SELECT name, COALESCE(system_prompt, ''), COALESCE(voice::text, 'af_bella'), COALESCE(llm_model, 'Qwen/Qwen2.5-7B-Instruct-AWQ')
-			FROM agents WHERE id::text = $1 LIMIT 1`, req.AgentID).Scan(&aName, &sPrompt, &vName, &lModel)
+			SELECT name, COALESCE(system_prompt, ''), COALESCE(voice::text, 'af_bella'), 
+			       COALESCE(llm_model, 'Qwen/Qwen2.5-7B-Instruct-AWQ'), COALESCE(knowledge_base_ids::text, '[]'),
+			       COALESCE(greeting, '')
+			FROM agents WHERE id::text = $1 LIMIT 1`, req.AgentID).Scan(&aName, &sPrompt, &vName, &lModel, &kbRaw, &greet)
 		if err == nil && aName != "" {
+			agentID = req.AgentID
 			agentName = aName
 			if sPrompt != "" {
 				systemPrompt = sPrompt
@@ -140,21 +173,81 @@ func (h *CallsHandler) StartCall(c *gin.Context) {
 			}
 			if lModel != "" {
 				llmModel = lModel
+			}
+			if greet != "" {
+				greeting = greet
+			}
+			_ = json.Unmarshal([]byte(kbRaw), &kbIDs)
+		}
+	}
+
+	// 3. Fallback to active agent if still not found
+	if agentID == "" {
+		var aID, aName, sPrompt, vName, lModel, kbRaw, greet string
+		err := h.dbPool.QueryRow(ctx, `
+			SELECT id::text, name, COALESCE(system_prompt, ''), COALESCE(voice::text, 'af_bella'), 
+			       COALESCE(llm_model, 'Qwen/Qwen2.5-7B-Instruct-AWQ'), COALESCE(knowledge_base_ids::text, '[]'),
+			       COALESCE(greeting, '')
+			FROM agents WHERE status = 'active' ORDER BY created_at ASC LIMIT 1`).
+			Scan(&aID, &aName, &sPrompt, &vName, &lModel, &kbRaw, &greet)
+		if err == nil && aName != "" {
+			agentID = aID
+			agentName = aName
+			if sPrompt != "" {
+				systemPrompt = sPrompt
+			}
+			if vName != "" {
+				voice = vName
+			}
+			if lModel != "" {
+				llmModel = lModel
+			}
+			if greet != "" {
+				greeting = greet
+			}
+			_ = json.Unmarshal([]byte(kbRaw), &kbIDs)
+		}
+	}
+
+	// 4. Ground system prompt with FAQ & Knowledge Base documents
+	var kbSnippets []string
+	kbRows, err := h.dbPool.Query(ctx, `
+		SELECT name, content_preview 
+		FROM knowledge_base 
+		WHERE status = 'indexed' AND (
+			id = ANY($1) 
+			OR ($2 != '' AND assigned_agent_ids @> jsonb_build_array($2::text))
+			OR assigned_agent_ids IS NULL 
+			OR jsonb_array_length(assigned_agent_ids) = 0
+		)
+		LIMIT 5`, kbIDs, agentID)
+	if err == nil {
+		defer kbRows.Close()
+		for kbRows.Next() {
+			var kbName, preview string
+			if err := kbRows.Scan(&kbName, &preview); err == nil && preview != "" {
+				kbSnippets = append(kbSnippets, fmt.Sprintf("- [%s]: %s", kbName, preview))
 			}
 		}
 	}
 
-	// 2. Insert initiated call record
+	if len(kbSnippets) > 0 {
+		systemPrompt += "\n\n[COMPANY KNOWLEDGE BASE & FAQS]:\n" + strings.Join(kbSnippets, "\n")
+	}
+
+	// 5. Insert initiated call record
 	insertCall := `
-		INSERT INTO call_records (call_id, tenant_id, caller_number, called_did, agent_name, status, llm_model, tts_model, stt_model, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, 'in_progress', $6, 'Kokoro-82M', 'Faster-Whisper distil-large-v3', NOW(), NOW())
+		INSERT INTO call_records (call_id, tenant_id, caller_number, called_did, agent_id, agent_name, status, llm_model, tts_model, stt_model, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, 'in_progress', $7, 'Kokoro-82M', 'Faster-Whisper distil-large-v3', NOW(), NOW())
 		ON CONFLICT (call_id) DO NOTHING`
-	_, _ = h.dbPool.Exec(ctx, insertCall, callID, tenantID, req.CustomerPhone, req.CalledDID, agentName, llmModel)
+	_, _ = h.dbPool.Exec(ctx, insertCall, callID, tenantID, req.CustomerPhone, req.CalledDID, agentID, agentName, llmModel)
 
 	respData := gin.H{
 		"call_id":            callID,
 		"tenant_id":          tenantID,
+		"agent_id":           agentID,
 		"agent_name":         agentName,
+		"greeting":           greeting,
 		"system_prompt":      systemPrompt,
 		"voice":              voice,
 		"voice_speed":        voiceSpeed,

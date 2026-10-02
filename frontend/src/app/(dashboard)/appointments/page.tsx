@@ -80,7 +80,7 @@ export default function AppointmentsPage() {
   // Google Account & OAuth Credentials Integration State (Pre-filled with real credentials)
   const [googleAccountName, setGoogleAccountName] = useState("Google Workspace User");
   const [selectedCalendarId, setSelectedCalendarId] = useState("primary");
-  const [googleEmailInput, setGoogleEmailInput] = useState(googleAccountEmail || "admin@apexvoice.ai");
+  const [googleEmailInput, setGoogleEmailInput] = useState(googleAccountEmail || "");
   const [googleClientId, setGoogleClientId] = useState("62350400975-n7drhihi3r0jqoh0jlrrs8latamelv4n.apps.googleusercontent.com");
   const [googleClientSecret, setGoogleClientSecret] = useState("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");
   const [googleServiceAccountJson, setGoogleServiceAccountJson] = useState("");
@@ -89,6 +89,12 @@ export default function AppointmentsPage() {
   const [isSyncingGoogleCalendar, setIsSyncingGoogleCalendar] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  useEffect(() => {
+    if (googleAccountConnected && googleAccountEmail) {
+      setGoogleEmailInput(googleAccountEmail);
+    }
+  }, [googleAccountConnected, googleAccountEmail]);
 
   const handleTestConnection = async () => {
     setIsTestingConnection(true);
@@ -124,19 +130,30 @@ export default function AppointmentsPage() {
 
   const handleConnectGoogleAccount = async () => {
     setAuthError(null);
-    const email = googleEmailInput.trim() || "admin@apexvoice.ai";
+    setTestResult(null);
+
+    const email = googleEmailInput.trim();
+    if (!email) {
+      setAuthError("Please enter a valid Google Account Email.");
+      return;
+    }
+
     const clientId = googleClientId.trim() || "62350400975-n7drhihi3r0jqoh0jlrrs8latamelv4n.apps.googleusercontent.com";
     const clientSecret = googleClientSecret.trim() || "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";
 
-    await connectGoogleAccount({
+    const res = await connectGoogleAccount({
       email,
       client_id: clientId,
       client_secret: clientSecret,
       account_name: googleAccountName,
     });
 
-    setAuthModalOpen(false);
-    await refreshAppointments();
+    if (res && res.success) {
+      setAuthModalOpen(false);
+      await refreshAppointments();
+    } else {
+      setAuthError(res?.error || "Failed to authorize and connect Google Account.");
+    }
   };
 
   // Google Sheets Live Sync State
@@ -339,6 +356,29 @@ export default function AppointmentsPage() {
     });
   }, [appointments, statusFilter, timeFilter, searchQuery]);
 
+  const getGoogleCalendarAddUrl = (apt: any) => {
+    if (!apt) return "#";
+    const title = encodeURIComponent(`${apt.title || "Solutions Consultation"} - ${apt.contactName || "Client"}`);
+    const details = encodeURIComponent(
+      `Call Notes: ${apt.notes || "Booked via AI Voice Agent Dashboard"}\nPhone: ${apt.contactPhone || ""}\nGoogle Meet: ${apt.meetingLink || "https://meet.google.com/new"}`
+    );
+    const location = encodeURIComponent(apt.meetingLink || "Google Meet");
+
+    let startIso = new Date().toISOString().replace(/-|:|\.\d\d\d/g, "");
+    let endIso = new Date(Date.now() + (apt.durationMinutes || 30) * 60000).toISOString().replace(/-|:|\.\d\d\d/g, "");
+
+    if (apt.scheduledAt) {
+      const startDate = new Date(apt.scheduledAt);
+      if (!isNaN(startDate.getTime())) {
+        startIso = startDate.toISOString().replace(/-|:|\.\d\d\d/g, "");
+        const endDate = new Date(startDate.getTime() + (apt.durationMinutes || 30) * 60000);
+        endIso = endDate.toISOString().replace(/-|:|\.\d\d\d/g, "");
+      }
+    }
+
+    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${startIso}/${endIso}&details=${details}&location=${location}`;
+  };
+
   const handleCreateAppointmentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newLeadName.trim() || !newLeadPhone.trim()) return;
@@ -432,8 +472,8 @@ export default function AppointmentsPage() {
             </div>
             <span>
               {googleAccountConnected
-                ? "Google Account Sync: Connected"
-                : "Google Account Sync: Disconnected"}
+                ? `Google Account Sync: Connected (${googleAccountEmail || "admin@apexvoice.ai"})`
+                : "Connect with Google: Disconnected"}
             </span>
             <span
               className={`w-2 h-2 rounded-full ${
@@ -782,6 +822,17 @@ export default function AppointmentsPage() {
 
                 {/* Actions */}
                 <div className="flex items-center gap-2 self-end md:self-center flex-wrap">
+                  <a
+                    href={getGoogleCalendarAddUrl(apt)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-1 px-3 py-1.5 bg-emerald-50 border border-emerald-300 hover:bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold transition-colors cursor-pointer shadow-2xs"
+                    title="Add this booking directly to live calendar.google.com"
+                  >
+                    <CalendarIcon className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Add to Google Calendar ↗</span>
+                  </a>
+
                   {apt.meetingLink && (
                     <button
                       onClick={() => handleOpenMeet(apt.meetingLink)}
@@ -869,12 +920,22 @@ export default function AppointmentsPage() {
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h4 className="font-bold text-sm text-[#0F172A]">{googleAccountName}</h4>
-                      <span className="px-2.5 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold rounded-full">
-                        OAuth 2.0 Connected
+                      <h4 className="font-bold text-sm text-[#0F172A]">
+                        {googleAccountConnected ? googleAccountName : "Google Account"}
+                      </h4>
+                      <span
+                        className={`px-2.5 py-0.5 text-[10px] font-bold rounded-full ${
+                          googleAccountConnected
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-rose-100 text-rose-700"
+                        }`}
+                      >
+                        {googleAccountConnected ? "OAuth 2.0 Connected" : "Disconnected"}
                       </span>
                     </div>
-                    <p className="text-xs text-[#64748B] font-mono mt-0.5">{googleAccountEmail}</p>
+                    <p className="text-xs text-[#64748B] font-mono mt-0.5">
+                      {googleAccountConnected ? googleAccountEmail : "Not Connected"}
+                    </p>
                   </div>
                 </div>
 
@@ -1257,6 +1318,9 @@ export default function AppointmentsPage() {
                   onClick={async () => {
                     await disconnectGoogleAccount();
                     setGoogleEmailInput("");
+                    setGoogleClientId("");
+                    setGoogleClientSecret("");
+                    setGoogleServiceAccountJson("");
                     setTestResult(null);
                     setAuthError(null);
                     setAuthModalOpen(false);
@@ -1484,7 +1548,17 @@ export default function AppointmentsPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between pt-3 border-t border-[#E2E8F0]">
+            <div className="flex items-center gap-2 flex-wrap pt-3 border-t border-[#E2E8F0]">
+              <a
+                href={getGoogleCalendarAddUrl(selectedAppointment)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1.5 px-3.5 py-2 bg-emerald-50 border border-emerald-300 text-emerald-800 rounded-xl font-bold hover:bg-emerald-100 cursor-pointer shadow-2xs"
+              >
+                <CalendarIcon className="w-3.5 h-3.5 text-emerald-600" />
+                <span>Add to Google Calendar ↗</span>
+              </a>
+
               {selectedAppointment.meetingLink && (
                 <button
                   onClick={() => handleOpenMeet(selectedAppointment.meetingLink)}

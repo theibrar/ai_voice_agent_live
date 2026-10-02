@@ -49,6 +49,7 @@ CREATE TABLE IF NOT EXISTS sip_trunks (
     pop_regions JSONB DEFAULT '["US-East", "US-West", "EU", "AP"]'::jsonb,
     is_default_carrier BOOLEAN DEFAULT false,
     api_key VARCHAR(255) DEFAULT '',
+    connection_id VARCHAR(255) DEFAULT '',
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

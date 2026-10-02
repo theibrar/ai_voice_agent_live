@@ -120,7 +120,7 @@ export function Sidebar() {
       items: [
         { label: translate("analytics", language), href: "/analytics", icon: TrendingUp, badge: "Live Intel" },
         { label: translate("ab_testing", language), href: "/ab-testing", icon: Scale, badge: "A/B" },
-        { label: "Voice Recorder", href: "/voice-recorder", icon: Mic, badge: "Audio Vault" },
+        { label: translate("voice_recorder", language), href: "/voice-recorder", icon: Mic, badge: "Audio Vault" },
         { label: translate("call_history", language), href: "/call-history", icon: History },
       ],
     },

@@ -253,13 +253,33 @@ export default function DashboardPage() {
 
   // Live Current Date
   const todayFormatted = useMemo(() => {
-    return new Date().toLocaleDateString("en-US", {
-      weekday: "short",
-      month: "short",
-      day: "numeric",
-      year: "numeric",
-    });
-  }, []);
+    try {
+      const locale =
+        language === "ur"
+          ? "ur-PK"
+          : language === "zh"
+          ? "zh-CN"
+          : language === "hi"
+          ? "hi-IN"
+          : language === "ar"
+          ? "ar-SA"
+          : language === "de"
+          ? "de-DE"
+          : language === "es"
+          ? "es-ES"
+          : language === "fr"
+          ? "fr-FR"
+          : "en-US";
+      return new Date().toLocaleDateString(locale, {
+        weekday: "short",
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      });
+    } catch {
+      return new Date().toLocaleDateString("en-US");
+    }
+  }, [language]);
 
   // Immediate data hydration on mount and login
   useEffect(() => {
@@ -362,15 +382,16 @@ export default function DashboardPage() {
     for (let i = -1; i <= 5; i++) {
       const d = new Date(now);
       d.setDate(now.getDate() + i);
+      const dayKey = d.toLocaleDateString("en-US", { weekday: "short" }).toLowerCase();
       days.push({
-        day: d.toLocaleDateString("en-US", { weekday: "short" }).toUpperCase(),
+        day: translate(dayKey, language).toUpperCase(),
         date: d.getDate(),
         offset: i,
         isToday: i === 0,
       });
     }
     return days;
-  }, []);
+  }, [language]);
 
   const liveCalls = calls.filter((c) => c.status === "live" || c.status === "ringing" || c.status === "on_hold");
 
@@ -479,7 +500,7 @@ export default function DashboardPage() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
           <h1 className="text-xl font-bold text-[#0F172A] tracking-tight">{translate("My Dashboard", language)}</h1>
-          <p className="text-xs text-[#64748B] mt-0.5">{translate("Welcome back Alex DeVries • Enterprise Operations Active", language)}</p>
+          <p className="text-xs text-[#64748B] mt-0.5">{translate("welcome_back", language)}</p>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">
@@ -510,13 +531,13 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between z-10">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/15 border border-white/20 text-white text-xs font-bold tracking-wide shadow-xs">
               <Sparkles className="w-3.5 h-3.5" />
-              <span>APEX VOICE AI PLATFORM</span>
+              <span>{translate("apex_platform", language)}</span>
             </div>
 
             <div className="flex items-center gap-2">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse shadow-sm" />
               <span className="text-xs font-mono font-bold tracking-wider text-white/95 uppercase">
-                {activeCallCount > 0 ? `${activeCallCount} Live Dialing` : translate("System Operational", language)}
+                {activeCallCount > 0 ? `${activeCallCount} ${translate("live_dialing", language)}` : translate("system_operational", language)}
               </span>
             </div>
           </div>
@@ -524,10 +545,10 @@ export default function DashboardPage() {
           {/* Center Content: Headline & Operations Subtext */}
           <div className="my-6 z-10 space-y-2">
             <h2 className="text-2xl md:text-3xl font-black tracking-tight text-white leading-tight">
-              {translate("Enterprise Voice Operations", language)}
+              {translate("enterprise_voice_operations", language)}
             </h2>
             <p className="text-xs md:text-sm text-white/85 max-w-xl leading-relaxed">
-              {translate("Real-time conversational intelligence with ultra-low latency STT, vLLM (Qwen 2.5 7B) reasoning, and automated CRM & calendar scheduling.", language)}
+              {translate("enterprise_voice_desc", language)}
             </p>
           </div>
 
@@ -535,25 +556,25 @@ export default function DashboardPage() {
           <div className="flex flex-wrap items-center justify-between gap-4 pt-4 border-t border-white/20 z-10">
             <div className="flex items-center gap-6">
               <div>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-white/70">{translate("Active Agents", language)}</span>
-                <p className="text-lg font-extrabold text-white">{agents.filter((a) => a.status === "active").length} Ready</p>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-white/70">{translate("active_agents", language)}</span>
+                <p className="text-lg font-extrabold text-white">{agents.filter((a) => a.status === "active").length} {translate("ready", language)}</p>
               </div>
               <div className="h-8 w-px bg-white/20" />
               <div>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-white/70">{translate("Running Campaigns", language)}</span>
-                <p className="text-lg font-extrabold text-white">{campaigns.filter((c) => c.status === "active").length} Running</p>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-white/70">{translate("running_campaigns", language)}</span>
+                <p className="text-lg font-extrabold text-white">{campaigns.filter((c) => c.status === "active").length} {translate("running", language)}</p>
               </div>
               <div className="h-8 w-px bg-white/20" />
               <div>
-                <span className="text-[10px] uppercase font-bold tracking-widest text-white/70">{translate("Booked Today", language)}</span>
-                <p className="text-lg font-extrabold text-white">{appointments.length} Slots</p>
+                <span className="text-[10px] uppercase font-bold tracking-widest text-white/70">{translate("booked_today", language)}</span>
+                <p className="text-lg font-extrabold text-white">{appointments.length} {translate("slots", language)}</p>
               </div>
             </div>
 
             {/* Clean Professional Badge */}
             <div className="hidden md:flex flex-col items-center justify-center w-28 h-28 rounded-2xl bg-white/10 border border-white/20 shrink-0 z-10">
               <Headphones className="w-10 h-10 text-white" />
-              <span className="text-[10px] font-bold tracking-wider mt-2 text-white/90">OPERATIONS</span>
+              <span className="text-[10px] font-bold tracking-wider mt-2 text-white/90">{translate("operations", language)}</span>
             </div>
           </div>
         </div>
@@ -563,7 +584,7 @@ export default function DashboardPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold uppercase tracking-wider text-[#64748B]">
-                {translate("OPERATIONS SCHEDULE", language)}
+                {translate("operations_schedule", language)}
               </span>
               <span className="text-xs font-bold text-[#3157D5] bg-[#EEF2FD] px-2 py-0.5 rounded-full">
                 {appointments.length} {translate("Appointments", language)}
@@ -610,7 +631,7 @@ export default function DashboardPage() {
             <div className="flex items-center gap-2">
               <input
                 type="text"
-                placeholder="Add operations appointment..."
+                placeholder={translate("add_operations_appointment_placeholder", language)}
                 value={appointmentInput}
                 onChange={(e) => setAppointmentInput(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleAddAppointment()}
@@ -620,7 +641,7 @@ export default function DashboardPage() {
                 onClick={handleAddAppointment}
                 className="px-3.5 py-2 bg-[#3157D5] hover:bg-[#2646B8] text-white text-xs font-bold rounded-xl shrink-0 cursor-pointer shadow-2xs"
               >
-                Add
+                {translate("add", language)}
               </button>
             </div>
 
@@ -646,7 +667,7 @@ export default function DashboardPage() {
                           {apt.contactName}
                         </span>
                         <span className="text-[10px] text-[#64748B] truncate block">
-                          Agent: {apt.agentName}
+                          {translate("agent", language)}: {apt.agentName}
                         </span>
                       </div>
                     </div>
@@ -672,7 +693,7 @@ export default function DashboardPage() {
               href="/appointments"
               className="text-[11px] font-bold text-[#3157D5] hover:underline flex items-center gap-1"
             >
-              <span>{translate("View Full Calendar", language)} &gt;</span>
+              <span>&lt; {translate("view_full_calendar", language)}</span>
             </Link>
           </div>
         </div>
@@ -685,7 +706,7 @@ export default function DashboardPage() {
           { id: "supervisor", label: translate("Live Supervisor", language), href: "/supervisor" },
           { id: "analytics", label: translate("Analytics Suite", language), href: "/analytics" },
           { id: "ab_lab", label: translate("A/B Testing Lab", language), href: "/ab-testing" },
-          { id: "voice_rec", label: "Voice Recorder", href: "/voice-recorder" },
+          { id: "voice_rec", label: translate("voice_recorder", language), href: "/voice-recorder" },
           { id: "smart_amd", label: translate("Smart AMD 2.0", language), href: "/smart-amd" },
         ].map((seg) => {
           const isSelected = activeSegment === seg.id;

@@ -46,11 +46,14 @@ func (h *PhoneNumbersHandler) ensureSchema() {
 	);`
 	_, _ = h.db.Exec(ctx, query)
 
+	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS phone_number VARCHAR(50);`)
+	_, _ = h.db.Exec(ctx, `UPDATE phone_numbers SET phone_number = number WHERE phone_number IS NULL OR phone_number = '';`)
 	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS capabilities JSONB DEFAULT '{"voice": true, "sms": true, "mms": false}'::jsonb;`)
 	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS assigned_agent_name VARCHAR(255);`)
 	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ DEFAULT NOW();`)
 	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS telnyx_order_id VARCHAR(100);`)
 	_, _ = h.db.Exec(ctx, `ALTER TABLE phone_numbers ADD COLUMN IF NOT EXISTS carrier VARCHAR(50) DEFAULT 'telnyx';`)
+	_, _ = h.db.Exec(ctx, `ALTER TABLE sip_trunks ADD COLUMN IF NOT EXISTS connection_id VARCHAR(255) DEFAULT '';`)
 }
 
 type CarrierCredentials struct {
@@ -438,21 +441,46 @@ func (h *PhoneNumbersHandler) ProvisionPhoneNumber(c *gin.Context) {
 		req.MonthlyCost = 2.50
 	}
 
+	// Automatic Agent Assignment: If user didn't explicitly pick an agent,
+	// automatically assign to the primary active AI Agent (e.g. Marcus) so calls work immediately!
+	var agentName string
+	if req.AssignedAgentID == "" {
+		_ = h.db.QueryRow(ctx, "SELECT id, name FROM agents WHERE status = 'active' ORDER BY created_at ASC LIMIT 1").Scan(&req.AssignedAgentID, &agentName)
+		if req.AssignedAgentID == "" {
+			req.AssignedAgentID = "agent-solar-1"
+			agentName = "Marcus (Solar Advisor)"
+		}
+	} else {
+		_ = h.db.QueryRow(ctx, "SELECT name FROM agents WHERE id = $1", req.AssignedAgentID).Scan(&agentName)
+	}
+
+	// Automatic Campaign Assignment
+	var campaignName string
+	if req.AssignedCampaignID == "" {
+		_ = h.db.QueryRow(ctx, "SELECT id::text, name FROM campaigns WHERE status = 'active' ORDER BY created_at ASC LIMIT 1").Scan(&req.AssignedCampaignID, &campaignName)
+		if req.AssignedCampaignID == "" {
+			req.AssignedCampaignID = "Direct Inbound"
+			campaignName = "Direct Inbound Campaign"
+		}
+	} else {
+		_ = h.db.QueryRow(ctx, "SELECT name FROM campaigns WHERE id = $1", req.AssignedCampaignID).Scan(&campaignName)
+	}
+
 	newID := "pn-" + uuid.New().String()[:8]
 
 	insertQuery := `
 		INSERT INTO phone_numbers (
-			id, tenant_id, number, friendly_name, country,
-			assigned_agent_id, assigned_campaign_id, status, monthly_cost,
-			capabilities, telnyx_order_id, carrier, created_at
-		) VALUES ($1, $2, $3, $4, $5, $6, $7, 'active', $8, '{"voice": true, "sms": true}'::jsonb, $9, 'telnyx', NOW())
+			id, tenant_id, number, phone_number, friendly_name, country,
+			assigned_agent_id, assigned_agent_name, assigned_campaign_id, status, monthly_cost,
+			capabilities, telnyx_order_id, carrier, created_at, updated_at
+		) VALUES ($1, $2, $3, $3, $4, $5, $6, $7, $8, 'active', $9, '{"voice": true, "sms": true}'::jsonb, $10, 'telnyx', NOW(), NOW())
 		RETURNING created_at`
 
 	var createdAt time.Time
 	err = h.db.QueryRow(
 		ctx, insertQuery,
 		newID, tenantID, req.PhoneNumber, req.FriendlyName, req.Country,
-		req.AssignedAgentID, req.AssignedCampaignID, req.MonthlyCost,
+		req.AssignedAgentID, agentName, req.AssignedCampaignID, req.MonthlyCost,
 		telnyxOrderID,
 	).Scan(&createdAt)
 
@@ -461,12 +489,41 @@ func (h *PhoneNumbersHandler) ProvisionPhoneNumber(c *gin.Context) {
 		return
 	}
 
-	var agentName, campaignName string
+	// Seamless Auto-Binding: Update Agent's assigned phone number, phone ID, and attach all active Knowledge Base FAQs
 	if req.AssignedAgentID != "" {
-		_ = h.db.QueryRow(ctx, "SELECT name FROM agents WHERE id = $1", req.AssignedAgentID).Scan(&agentName)
-	}
-	if req.AssignedCampaignID != "" {
-		_ = h.db.QueryRow(ctx, "SELECT name FROM campaigns WHERE id = $1", req.AssignedCampaignID).Scan(&campaignName)
+		formattedPhone := formatDisplayPhoneNumber(req.PhoneNumber)
+		_, _ = h.db.Exec(ctx, `
+			UPDATE agents 
+			SET assigned_phone_number = $1, 
+			    assigned_phone_number_id = $2,
+			    updated_at = NOW() 
+			WHERE id = $3`,
+			formattedPhone, newID, req.AssignedAgentID,
+		)
+
+		// Link all active Knowledge Base documents & FAQs to this agent
+		_, _ = h.db.Exec(ctx, `
+			UPDATE knowledge_base 
+			SET assigned_agent_ids = CASE 
+				WHEN assigned_agent_ids IS NULL THEN jsonb_build_array($1::text)
+				WHEN NOT (assigned_agent_ids @> jsonb_build_array($1::text)) THEN assigned_agent_ids || jsonb_build_array($1::text)
+				ELSE assigned_agent_ids
+			END,
+			updated_at = NOW()
+			WHERE status = 'indexed'`,
+			req.AssignedAgentID,
+		)
+
+		// Ensure the agent has all indexed knowledge base IDs
+		_, _ = h.db.Exec(ctx, `
+			UPDATE agents 
+			SET knowledge_base_ids = (
+				SELECT COALESCE(jsonb_agg(id), '[]'::jsonb) FROM knowledge_base WHERE status = 'indexed'
+			),
+			updated_at = NOW()
+			WHERE id = $1`,
+			req.AssignedAgentID,
+		)
 	}
 
 	c.JSON(http.StatusCreated, gin.H{
@@ -670,18 +727,38 @@ func (h *PhoneNumbersHandler) AssignPhoneNumber(c *gin.Context) {
 
 	ctx := c.Request.Context()
 
+	var agentName string
+	if req.AssignedAgentID != nil && *req.AssignedAgentID != "" {
+		_ = h.db.QueryRow(ctx, "SELECT name FROM agents WHERE id = $1", *req.AssignedAgentID).Scan(&agentName)
+	}
+
 	updateQuery := `
 		UPDATE phone_numbers
 		SET 
 			assigned_agent_id = COALESCE($1, assigned_agent_id),
-			assigned_campaign_id = COALESCE($2, assigned_campaign_id),
-			friendly_name = COALESCE($3, friendly_name)
-		WHERE id = $4 AND tenant_id = $5`
+			assigned_agent_name = CASE WHEN $1 IS NOT NULL THEN $2 ELSE assigned_agent_name END,
+			assigned_campaign_id = COALESCE($3, assigned_campaign_id),
+			friendly_name = COALESCE($4, friendly_name),
+			updated_at = NOW()
+		WHERE id = $5 AND tenant_id = $6
+		RETURNING number`
 
-	_, err := h.db.Exec(ctx, updateQuery, req.AssignedAgentID, req.AssignedCampaignID, req.FriendlyName, numberID, tenantID)
+	var currentNumber string
+	err := h.db.QueryRow(ctx, updateQuery, req.AssignedAgentID, agentName, req.AssignedCampaignID, req.FriendlyName, numberID, tenantID).Scan(&currentNumber)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to update phone number: " + err.Error()})
 		return
+	}
+
+	if req.AssignedAgentID != nil && *req.AssignedAgentID != "" && currentNumber != "" {
+		_, _ = h.db.Exec(ctx, `
+			UPDATE agents 
+			SET assigned_phone_number = $1, 
+			    assigned_phone_number_id = $2,
+			    updated_at = NOW() 
+			WHERE id = $3`,
+			formatDisplayPhoneNumber(currentNumber), numberID, *req.AssignedAgentID,
+		)
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Phone number routing updated successfully"})

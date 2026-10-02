@@ -502,8 +502,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(credentials),
       });
-      if (res.ok) {
-        const data = await res.json();
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && data.success !== false) {
         setGoogleAccountConnected(true);
         setGoogleAccountEmail(data.email || credentials.email);
         setGoogleSheetsConnected(true);
@@ -513,10 +513,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           description: `Synchronized Google Calendar & Google Sheets for ${data.email || credentials.email}.`,
           type: "success",
         });
-        return data;
+        return { success: true, ...data };
+      } else {
+        const errorMsg = data.error || "Failed to connect Google Account.";
+        addToast({
+          title: "Connection Failed",
+          description: errorMsg,
+          type: "error",
+        });
+        return { success: false, error: errorMsg };
       }
-    } catch (err) {
+    } catch (err: any) {
       console.warn("Failed to connect Google account:", err);
+      const errorMsg = err?.message || "Failed to connect Google Account.";
+      return { success: false, error: errorMsg };
     }
   }, [addToast]);
 
@@ -524,6 +534,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     try {
       const apiUrl = getApiBase() + '/integrations/google/disconnect';
       await apiFetch(apiUrl, { method: "POST" });
+    } catch (err) {
+      console.warn("Failed to disconnect Google account:", err);
+    } finally {
       setGoogleAccountConnected(false);
       setGoogleAccountEmail("");
       setGoogleSheetsConnected(false);
@@ -533,8 +546,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         description: "Google Calendar & Sheets sync disconnected from database.",
         type: "info",
       });
-    } catch (err) {
-      console.warn("Failed to disconnect Google account:", err);
     }
   }, [addToast]);
 

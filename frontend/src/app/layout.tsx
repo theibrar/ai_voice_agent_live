@@ -53,11 +53,36 @@ export default function RootLayout({
                   }, true);
                 }
               })();
+              function googleTranslateElementInit() {
+                try {
+                  if (window.google && window.google.translate) {
+                    new window.google.translate.TranslateElement({
+                      pageLanguage: 'en',
+                      autoDisplay: false
+                    }, 'google_translate_element');
+                  }
+                } catch(e) {}
+              }
             `,
           }}
         />
+        <script
+          src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
+          async
+        />
       </head>
       <body className="min-h-full flex flex-col bg-[#FFFFFF] text-[#0F172A] font-sans">
+        <div
+          id="google_translate_element"
+          style={{
+            position: "absolute",
+            top: "-9999px",
+            left: "-9999px",
+            width: "1px",
+            height: "1px",
+            overflow: "hidden",
+          }}
+        />
         <AuthProvider>
           <AppProvider>
             <LanguageProvider>{children}</LanguageProvider>

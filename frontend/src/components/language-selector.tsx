@@ -59,6 +59,33 @@ export function LanguageSelector({
     }
     setIsOpen(false);
     setSearch("");
+
+    // Set Google Translate cookie directly
+    const gCode = lang.code === "zh" ? "zh-CN" : lang.code;
+    try {
+      if (lang.code === "en") {
+        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
+        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=;";
+        try {
+          document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`;
+        } catch {}
+      } else {
+        document.cookie = `googtrans=/en/${gCode}; path=/;`;
+        try {
+          document.cookie = `googtrans=/en/${gCode}; path=/; domain=${window.location.hostname};`;
+        } catch {}
+      }
+    } catch {}
+
+    // Trigger Google Translate dropdown
+    const select = document.querySelector(".goog-te-combo") as HTMLSelectElement | null;
+    if (select) {
+      const targetVal = lang.code === "en" ? "" : gCode;
+      if (select.value !== targetVal) {
+        select.value = targetVal;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      }
+    }
   };
 
   return (

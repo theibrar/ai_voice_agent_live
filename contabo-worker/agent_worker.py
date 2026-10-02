@@ -202,6 +202,7 @@ class CallSession:
 
         # Agent persona (overwritten by /calls/start backend response)
         self.agent_name    = "Marcus (Solar Advisor)"
+        self.greeting      = "Hello! Thanks for calling Apex Solutions. My name is Marcus. How can I help you today?"
         self.voice_name    = DEFAULT_VOICE
         self.voice_speed   = 1.0
         self.tenant_id     = 1
@@ -247,6 +248,7 @@ class CallSession:
                     d = await r.json()
                     self.agent_name    = d.get("agent_name")    or self.agent_name
                     self.system_prompt = d.get("system_prompt") or self.system_prompt
+                    self.greeting      = d.get("greeting")      or self.greeting
                     self.voice_name    = d.get("voice")         or self.voice_name
                     self.voice_speed   = float(d.get("voice_speed", 1.0))
                     self.tenant_id     = d.get("tenant_id", 1)
@@ -658,11 +660,13 @@ async def entrypoint(ctx: JobContext):
     sess = await get_session()
 
     # Greeting
-    first_name   = cs.agent_name.split()[0]
-    greeting_txt = (
-        f"Hello! Thanks for calling. My name is {first_name}. "
-        "How can I help you today?"
-    )
+    greeting_txt = cs.greeting
+    if not greeting_txt:
+        first_name   = cs.agent_name.split()[0]
+        greeting_txt = (
+            f"Hello! Thanks for calling. My name is {first_name}. "
+            "How can I help you today?"
+        )
     logger.info(f"Greeting: \"{greeting_txt}\"")
     await play_pcm(
         audio_source,

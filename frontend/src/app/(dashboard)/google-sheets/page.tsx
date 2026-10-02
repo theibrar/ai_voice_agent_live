@@ -61,13 +61,19 @@ export default function GoogleSheetsPage() {
   const [syncedRows, setSyncedRows] = useState<Array<any>>([]);
 
   // Google Account Credentials State (Pre-filled with provided client credentials)
-  const [googleEmailInput, setGoogleEmailInput] = useState(googleAccountEmail || "admin@apexvoice.ai");
+  const [googleEmailInput, setGoogleEmailInput] = useState(googleAccountEmail || "");
   const [googleClientId, setGoogleClientId] = useState("62350400975-n7drhihi3r0jqoh0jlrrs8latamelv4n.apps.googleusercontent.com");
   const [googleClientSecret, setGoogleClientSecret] = useState("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");
   const [serviceAccountJson, setServiceAccountJson] = useState("");
   const [authError, setAuthError] = useState<string | null>(null);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null);
+
+  React.useEffect(() => {
+    if (googleAccountConnected && googleAccountEmail) {
+      setGoogleEmailInput(googleAccountEmail);
+    }
+  }, [googleAccountConnected, googleAccountEmail]);
 
   // Load database rows from PostgreSQL table google_sheet_rows
   const loadDatabaseRows = React.useCallback(async () => {
@@ -123,7 +129,14 @@ export default function GoogleSheetsPage() {
 
   const handleConnectGoogleAccount = async () => {
     setAuthError(null);
-    const email = googleEmailInput.trim() || "admin@apexvoice.ai";
+    setTestResult(null);
+
+    const email = googleEmailInput.trim();
+    if (!email) {
+      setAuthError("Please enter a valid Google Account Email.");
+      return;
+    }
+
     const clientId = googleClientId.trim() || "62350400975-n7drhihi3r0jqoh0jlrrs8latamelv4n.apps.googleusercontent.com";
     const clientSecret = googleClientSecret.trim() || "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";
 
@@ -134,13 +147,16 @@ export default function GoogleSheetsPage() {
       account_name: "Google Workspace User",
     });
 
-    if (res && res.spreadsheet_url) {
-      setSpreadsheetUrl(res.spreadsheet_url);
-      setSpreadsheetTitle(res.spreadsheet_title || "Apex Voice Leads & Appointments - 2026");
+    if (res && res.success) {
+      if (res.spreadsheet_url) {
+        setSpreadsheetUrl(res.spreadsheet_url);
+        setSpreadsheetTitle(res.spreadsheet_title || "Apex Voice Leads & Appointments - 2026");
+      }
+      setAuthModalOpen(false);
+      await loadDatabaseRows();
+    } else {
+      setAuthError(res?.error || "Failed to authorize and connect Google Account.");
     }
-
-    setAuthModalOpen(false);
-    await loadDatabaseRows();
   };
 
   const handleCreateNewSheet = async () => {
@@ -228,7 +244,7 @@ export default function GoogleSheetsPage() {
             <span>
               {googleAccountConnected
                 ? `Google Account: Connected (${googleAccountEmail || "admin@apexvoice.ai"})`
-                : "Google Account Sync: Disconnected"}
+                : "Connect with Google: Disconnected"}
             </span>
             <span
               className={`w-2 h-2 rounded-full ${
@@ -328,7 +344,7 @@ export default function GoogleSheetsPage() {
             }`}
           >
             <Key className="w-3.5 h-3.5 text-[#3157D5]" />
-            <span>{googleAccountConnected ? "Configure Auth Credentials" : "Connect Google Account"}</span>
+            <span>{googleAccountConnected ? "Configure Auth Credentials" : "Connect with Google"}</span>
           </button>
         </div>
       </div>
@@ -511,6 +527,9 @@ export default function GoogleSheetsPage() {
                   onClick={async () => {
                     await disconnectGoogleAccount();
                     setGoogleEmailInput("");
+                    setGoogleClientId("");
+                    setGoogleClientSecret("");
+                    setServiceAccountJson("");
                     setTestResult(null);
                     setAuthError(null);
                     setAuthModalOpen(false);

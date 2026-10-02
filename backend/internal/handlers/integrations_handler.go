@@ -215,6 +215,10 @@ func (h *IntegrationsHandler) ConnectGoogleAccount(c *gin.Context) {
 	}
 
 	email := strings.TrimSpace(req.Email)
+	if email == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Please enter a valid Google Account Email."})
+		return
+	}
 	clientID := strings.TrimSpace(req.ClientID)
 	clientSecret := strings.TrimSpace(req.ClientSecret)
 

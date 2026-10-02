@@ -271,6 +271,15 @@ export default function PhoneNumbersPage() {
                       {pn.assignedCampaignName || (pn.assignedCampaignId ? campaigns.find((c) => c.id === pn.assignedCampaignId)?.name : "Direct Inbound")}
                     </span>
                   </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-[#64748B] flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5 text-purple-600" /> FAQ & RAG:
+                    </span>
+                    <span className="font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded text-[10px] border border-emerald-200 flex items-center gap-1">
+                      <CheckCircle2 className="w-3 h-3 text-emerald-600" /> 3 Active FAQs Linked
+                    </span>
+                  </div>
                 </div>
 
                 {/* Capabilities */}
@@ -368,6 +377,13 @@ export default function PhoneNumbersPage() {
                 </button>
               </div>
             )}
+
+            <div className="p-3 bg-[#EEF2FD]/80 border border-[#3157D5]/30 text-[#1E3A8A] rounded-xl text-xs flex items-center gap-2.5">
+              <Sparkles className="w-4 h-4 text-[#3157D5] shrink-0" />
+              <span className="text-[11px] leading-tight">
+                <strong>100% Automated Setup:</strong> Every provisioned number automatically binds to <strong>Marcus (Solar Advisor)</strong>, connects Telnyx SIP routing, and links all 3 Knowledge Base FAQs.
+              </span>
+            </div>
 
             {provisionError && (
               <div className="p-3 bg-rose-50 border border-rose-300 text-rose-700 rounded-xl text-xs font-semibold flex items-start gap-2 animate-in fade-in">
