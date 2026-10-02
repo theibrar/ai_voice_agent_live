@@ -1214,41 +1214,27 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
       return { online: false, latencyMs: 0, message: "No endpoint URL configured" };
     }
 
-    const t0 = performance.now();
     try {
-      let probeUrl = eng.baseUrl;
-      const headers: Record<string, string> = {};
-      const key = eng.apiKey || "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF";
-
-      if (eng.category === "llm") {
-        probeUrl = eng.baseUrl.endsWith("/v1") ? `${eng.baseUrl}/models` : `${eng.baseUrl}/v1/models`;
-        headers["Authorization"] = `Bearer ${key}`;
-      } else {
-        probeUrl = eng.baseUrl.replace(/\/+$/, "") + "/health";
-        headers["X-API-Key"] = key;
-        headers["Authorization"] = `Bearer ${key}`;
-      }
-
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 4000);
-
-      const res = await fetch(probeUrl, {
-        method: "GET",
-        headers,
-        signal: controller.signal,
+      const res = await fetch("/api/super-admin/probe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          engineId: eng.id,
+          baseUrl: eng.baseUrl,
+          apiKey: eng.apiKey || "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF",
+          category: eng.category,
+        }),
       });
-      clearTimeout(timeoutId);
 
-      const latencyMs = Math.round(performance.now() - t0);
       if (res.ok) {
-        setEngines((prev) => prev.map((e) => e.id === engineId ? { ...e, latencyAvgMs: latencyMs, status: "active" } : e));
-        return { online: true, latencyMs, message: `Status ${res.status} OK` };
+        const data = await res.json();
+        setEngines((prev) => prev.map((e) => e.id === engineId ? { ...e, latencyAvgMs: data.latencyMs, status: data.online ? "active" : "offline" } : e));
+        return { online: data.online, latencyMs: data.latencyMs, message: data.message };
       } else {
-        return { online: false, latencyMs, message: `HTTP ${res.status}` };
+        return { online: false, latencyMs: 0, message: `Server error ${res.status}` };
       }
     } catch (err: any) {
-      const latencyMs = Math.round(performance.now() - t0);
-      return { online: false, latencyMs, message: err.message || "Unreachable" };
+      return { online: false, latencyMs: 0, message: err.message || "Failed to reach probe proxy" };
     }
   }, [engines]);
 

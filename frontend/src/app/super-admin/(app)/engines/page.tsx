@@ -63,7 +63,6 @@ export default function SuperAdminEnginesPage() {
     "eng-vllm-qwen": { online: true, latencyMs: 95 },
     "eng-kokoro-tts": { online: true, latencyMs: 45 },
     "eng-parakeet-stt": { online: true, latencyMs: 110 },
-    "eng-whisper-stt": { online: true, latencyMs: 110 },
     "eng-vad-silero": { online: true, latencyMs: 5 },
     "eng-prosody-testbench": { online: true, latencyMs: 50 },
   });

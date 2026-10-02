@@ -109,19 +109,20 @@ export function LanguageProvider({ children }: { children: React.ReactNode }) {
     // Manage Google Translate cookie
     const setGoogleTranslateCookie = (langCode: string) => {
       try {
-        const gCode = langCode === "zh" ? "zh-CN" : langCode;
+        const hostname = typeof window !== "undefined" ? window.location.hostname : "";
+        const domains = ["", hostname, `.${hostname}`];
+
         if (langCode === "en") {
-          document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-          document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=;";
-          try {
-            document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`;
-          } catch {}
+          domains.forEach((d) => {
+            document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; ${d ? `domain=${d};` : ""}`;
+            document.cookie = `googtrans=/en/en; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; ${d ? `domain=${d};` : ""}`;
+          });
         } else {
           const val = `/en/${gCode}`;
-          document.cookie = `googtrans=${val}; path=/;`;
-          try {
-            document.cookie = `googtrans=${val}; path=/; domain=${window.location.hostname};`;
-          } catch {}
+          const expires = "expires=Fri, 31 Dec 9999 23:59:59 GMT;";
+          domains.forEach((d) => {
+            document.cookie = `googtrans=${val}; path=/; ${expires} ${d ? `domain=${d};` : ""}`;
+          });
         }
       } catch (e) {}
     };

@@ -103,7 +103,7 @@ func (h *SuperAdminHandler) ensureSchemaAndSeed() {
 			created_at TIMESTAMPTZ DEFAULT NOW(),
 			synced_at TIMESTAMPTZ DEFAULT NOW()
 		);
-		DELETE FROM ai_engines WHERE id NOT IN ('eng-vllm-qwen', 'eng-kokoro-tts', 'eng-parakeet-stt', 'eng-whisper-stt', 'eng-vad-silero', 'eng-prosody-testbench');
+		DELETE FROM ai_engines WHERE id NOT IN ('eng-vllm-qwen', 'eng-kokoro-tts', 'eng-parakeet-stt', 'eng-vad-silero', 'eng-prosody-testbench') OR id = 'eng-whisper-stt';
 		INSERT INTO ai_engines (
 			id, engine_name, provider, engine_type, model_identifier, endpoint_url,
 			api_key, tier_requirement, latency_avg_ms, cost_per_unit, is_custom,
