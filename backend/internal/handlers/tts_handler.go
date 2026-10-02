@@ -52,7 +52,7 @@ func (h *TTSHandler) SynthesizeSpeech(c *gin.Context) {
 
 	ttsBaseURL := os.Getenv("TTS_BASE_URL")
 	if ttsBaseURL == "" {
-		ttsBaseURL = "http://77.54.200.11:15137"
+		ttsBaseURL = "http://77.104.167.149:59643"
 	}
 
 	gpuAPIKey := os.Getenv("GPU_API_KEY")
@@ -60,6 +60,39 @@ func (h *TTSHandler) SynthesizeSpeech(c *gin.Context) {
 		gpuAPIKey = "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF"
 	}
 
+	// Try OpenAI audio/speech endpoint first
+	openAIPayload := map[string]interface{}{
+		"model":           "kokoro-82m",
+		"input":           req.Text,
+		"voice":           req.Voice,
+		"speed":           req.Speed,
+		"response_format": "wav",
+	}
+	openAIBytes, _ := json.Marshal(openAIPayload)
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	ctx := c.Request.Context()
+
+	httpReq, err := http.NewRequestWithContext(ctx, "POST", ttsBaseURL+"/v1/audio/speech", bytes.NewBuffer(openAIBytes))
+	if err == nil {
+		httpReq.Header.Set("Content-Type", "application/json")
+		httpReq.Header.Set("X-API-Key", gpuAPIKey)
+		httpReq.Header.Set("Authorization", "Bearer "+gpuAPIKey)
+		resp, err := client.Do(httpReq)
+		if err == nil && resp.StatusCode == http.StatusOK {
+			defer resp.Body.Close()
+			c.Header("Content-Type", "audio/wav")
+			c.Header("Cache-Control", "public, max-age=3600")
+			c.Status(http.StatusOK)
+			_, _ = io.Copy(c.Writer, resp.Body)
+			return
+		}
+		if resp != nil {
+			resp.Body.Close()
+		}
+	}
+
+	// Fallback to /synthesize
 	targetURL := ttsBaseURL + "/synthesize"
 	reqBytes, err := json.Marshal(req)
 	if err != nil {
@@ -67,19 +100,17 @@ func (h *TTSHandler) SynthesizeSpeech(c *gin.Context) {
 		return
 	}
 
-	ctx := c.Request.Context()
-	httpReq, err := http.NewRequestWithContext(ctx, "POST", targetURL, bytes.NewBuffer(reqBytes))
+	httpReq2, err := http.NewRequestWithContext(ctx, "POST", targetURL, bytes.NewBuffer(reqBytes))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to build HTTP request"})
 		return
 	}
 
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("X-API-Key", gpuAPIKey)
-	httpReq.Header.Set("Authorization", "Bearer "+gpuAPIKey)
+	httpReq2.Header.Set("Content-Type", "application/json")
+	httpReq2.Header.Set("X-API-Key", gpuAPIKey)
+	httpReq2.Header.Set("Authorization", "Bearer "+gpuAPIKey)
 
-	client := &http.Client{Timeout: 10 * time.Second}
-	resp, err := client.Do(httpReq)
+	resp, err := client.Do(httpReq2)
 	if err != nil {
 		c.JSON(http.StatusBadGateway, gin.H{"error": "GPU TTS service unreachable: " + err.Error()})
 		return

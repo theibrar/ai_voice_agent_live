@@ -46,7 +46,13 @@ export default function RootLayout({
               (function() {
                 if (typeof window !== 'undefined') {
                   window.addEventListener('error', function(e) {
-                    if (e && e.message && (e.message.indexOf("startTime") !== -1 || e.message.indexOf("reportAllChanges") !== -1)) {
+                    if (e && e.message && (
+                      e.message.indexOf("startTime") !== -1 ||
+                      e.message.indexOf("reportAllChanges") !== -1 ||
+                      e.message.indexOf("removeChild") !== -1 ||
+                      e.message.indexOf("insertBefore") !== -1 ||
+                      e.message.indexOf("The node to be removed is not a child") !== -1
+                    )) {
                       e.stopImmediatePropagation();
                       e.preventDefault();
                     }
@@ -67,6 +73,7 @@ export default function RootLayout({
           }}
         />
         <script
+          id="google-translate-script"
           src="https://translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"
           async
         />

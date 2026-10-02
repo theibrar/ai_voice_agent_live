@@ -379,40 +379,33 @@ export default function SuperAdminEnginesPage() {
             return (
               <div
                 key={engine.id}
-                className={`p-6 bg-white rounded-3xl border transition-all shadow-xs flex flex-col justify-between space-y-4 ${
-                  engine.isCustom
-                    ? "border-amber-300 bg-gradient-to-b from-amber-50/20 to-white"
-                    : engine.isGlobalDefault
-                    ? "border-[#3157D5] ring-2 ring-[#3157D5]/30"
+                className={`p-6 bg-white rounded-3xl border transition-all shadow-xs flex flex-col justify-between space-y-4 hover:shadow-md ${
+                  engine.isGlobalDefault
+                    ? "border-[#3157D5] ring-2 ring-[#3157D5]/20"
                     : "border-[#E2E8F0] hover:border-[#3157D5]/40"
                 }`}
               >
                 <div className="space-y-3">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-[#3157D5] text-white flex items-center justify-center shadow-md shadow-[#3157D5]/20">
+                      <div className="w-10 h-10 rounded-2xl bg-[#3157D5] text-white flex items-center justify-center shadow-md shadow-[#3157D5]/20 shrink-0">
                         {isLlm ? <Cpu className="w-5 h-5 text-white" /> : isTts ? <Headphones className="w-5 h-5 text-white" /> : <Mic className="w-5 h-5 text-white" />}
                       </div>
                       <div>
-                        <div className="flex items-center gap-1.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
                           <h3 className="text-base font-bold text-[#0F172A] leading-tight">{engine.name}</h3>
-                          {engine.isCustom && (
-                            <span className="text-[8px] font-bold text-amber-700 bg-amber-100 px-1.5 py-0.2 rounded">
-                              Custom
-                            </span>
-                          )}
                           {engine.isGlobalDefault && (
-                            <span className="text-[8px] font-bold text-[#3157D5] bg-[#EEF2FD] px-1.5 py-0.2 rounded">
-                              Default
+                            <span className="text-[9px] font-bold text-[#3157D5] bg-[#EEF2FD] px-2 py-0.5 rounded-full border border-[#3157D5]/20">
+                              Active Fleet Default
                             </span>
                           )}
                         </div>
-                        <p className="text-[11px] text-[#64748B]">{engine.provider} • {engine.category.toUpperCase()}</p>
+                        <p className="text-[11px] text-[#64748B] font-medium">{engine.provider} • {engine.category.toUpperCase()}</p>
                       </div>
                     </div>
 
-                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
-                      engine.status === "active" ? "bg-[#EEF2FD] text-[#3157D5]" : "bg-[#F1F5F9] text-[#64748B]"
+                    <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                      engine.status === "active" ? "bg-emerald-50 text-emerald-700 border border-emerald-200" : "bg-[#F1F5F9] text-[#64748B]"
                     }`}>
                       {engine.status}
                     </span>
@@ -422,9 +415,9 @@ export default function SuperAdminEnginesPage() {
                     {engine.description}
                   </p>
 
-                  {engine.isCustom && engine.baseUrl && (
-                    <div className="p-2 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] text-[10px] font-mono text-[#3157D5] truncate">
-                      Endpoint: {engine.baseUrl}
+                  {engine.baseUrl && (
+                    <div className="flex items-center justify-between gap-2 p-2 bg-[#F8FAFC] rounded-xl border border-[#E2E8F0] text-[10px] font-mono text-[#3157D5]">
+                      <span className="truncate">{engine.baseUrl}</span>
                     </div>
                   )}
 

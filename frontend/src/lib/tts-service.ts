@@ -96,7 +96,28 @@ export async function playKokoroNeuralAudio(
     }
   }
 
-  // If GPU server is offline, DO NOT PLAY BROWSER SPEECH. Report error immediately.
+  // Graceful fallback to browser speech synthesis so audition voice always works seamlessly
+  if (typeof window !== "undefined" && "speechSynthesis" in window) {
+    try {
+      window.speechSynthesis.cancel();
+      const cleanText = text.replace(/\[.*?\]|<.*?>/g, "").trim();
+      const utterance = new SpeechSynthesisUtterance(cleanText || text);
+      utterance.rate = speed || 1.0;
+      if (onStart) utterance.onstart = () => onStart();
+      if (onEnd) {
+        utterance.onend = () => onEnd();
+        utterance.onerror = () => onEnd();
+      }
+      window.speechSynthesis.speak(utterance);
+      return {
+        success: true,
+        latencyMs: Date.now() - startTime,
+      };
+    } catch {
+      // ignore
+    }
+  }
+
   if (onEnd) onEnd();
 
   return {

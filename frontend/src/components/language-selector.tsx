@@ -60,31 +60,39 @@ export function LanguageSelector({
     setIsOpen(false);
     setSearch("");
 
-    // Set Google Translate cookie directly
+    // Set Google Translate cookie directly across host, domain, and root path
     const gCode = lang.code === "zh" ? "zh-CN" : lang.code;
+    const cookieVal = lang.code === "en" ? "" : `/en/${gCode}`;
+    const expires = lang.code === "en" ? "expires=Thu, 01 Jan 1970 00:00:00 UTC;" : "expires=Fri, 31 Dec 9999 23:59:59 GMT;";
+    const hostname = typeof window !== "undefined" ? window.location.hostname : "";
+
     try {
-      if (lang.code === "en") {
-        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;";
-        document.cookie = "googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=;";
-        try {
-          document.cookie = `googtrans=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/; domain=${window.location.hostname};`;
-        } catch {}
-      } else {
-        document.cookie = `googtrans=/en/${gCode}; path=/;`;
-        try {
-          document.cookie = `googtrans=/en/${gCode}; path=/; domain=${window.location.hostname};`;
-        } catch {}
+      document.cookie = `googtrans=${cookieVal}; path=/; ${expires}`;
+      if (hostname) {
+        document.cookie = `googtrans=${cookieVal}; domain=${hostname}; path=/; ${expires}`;
+        if (hostname.includes(".") && !hostname.startsWith(".")) {
+          document.cookie = `googtrans=${cookieVal}; domain=.${hostname}; path=/; ${expires}`;
+        }
       }
     } catch {}
+
+    // Dispatch global event so all providers update immediately
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("apex-language-change", { detail: lang.code }));
+    }
 
     // Trigger Google Translate dropdown
     const select = document.querySelector(".goog-te-combo") as HTMLSelectElement | null;
     if (select) {
       const targetVal = lang.code === "en" ? "" : gCode;
-      if (select.value !== targetVal) {
-        select.value = targetVal;
-        select.dispatchEvent(new Event("change", { bubbles: true }));
-      }
+      select.value = targetVal;
+      select.dispatchEvent(new Event("change", { bubbles: true }));
+      select.dispatchEvent(new Event("input", { bubbles: true }));
+    } else if (typeof window !== "undefined") {
+      // If combo not ready yet, reload so the engine boots with the new cookie
+      setTimeout(() => {
+        window.location.reload();
+      }, 150);
     }
   };
 

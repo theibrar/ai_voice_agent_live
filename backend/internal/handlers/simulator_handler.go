@@ -73,7 +73,7 @@ func (h *SimulatorHandler) SimulateChat(c *gin.Context) {
 
 	vllmBaseURL := os.Getenv("VLLM_BASE_URL")
 	if vllmBaseURL == "" {
-		vllmBaseURL = "http://77.54.200.11:15219/v1"
+		vllmBaseURL = "http://77.104.167.149:59982/v1"
 	}
 	vllmBaseURL = strings.TrimRight(vllmBaseURL, "/")
 
