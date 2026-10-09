@@ -345,7 +345,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [calls, setCalls] = useState<Call[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [appointments, setAppointments] = useState<Appointment[]>(initialAppointments);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [knowledgeSources, setKnowledgeSources] = useState<KnowledgeSource[]>(initialKnowledgeSources);
   const [phoneNumbers, setPhoneNumbers] = useState<PhoneNumber[]>([]);
   const [incomingConnections] = useState<IncomingConnection[]>([]);
@@ -1030,8 +1030,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             notes: a.notes || "",
             createdAt: a.createdAt || a.created_at || new Date().toISOString(),
           })));
-        } else if (data && Array.isArray(data.appointments) && data.appointments.length === 0) {
-          setAppointments(initialAppointments);
+        } else if (data && Array.isArray(data.appointments)) {
+          setAppointments([]);
         }
         if (data && Array.isArray(data.drive_files)) {
           setSyncedDriveFiles(data.drive_files);
@@ -1039,7 +1039,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } catch (err) {
       console.warn("Could not fetch appointments from backend database:", err);
-      setAppointments(initialAppointments);
+      setAppointments([]);
     }
   }, []);
 
