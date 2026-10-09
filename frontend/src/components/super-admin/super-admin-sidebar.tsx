@@ -32,6 +32,7 @@ import {
   Layers,
   PieChart,
   Server,
+  Terminal,
 } from "lucide-react";
 
 interface NavItem {
@@ -210,6 +211,13 @@ function SuperAdminSidebarContent() {
           label: "Audit Logs & Security",
           href: "/super-admin/audit-logs",
           icon: ShieldCheck,
+        },
+        {
+          label: "Debugging Logs",
+          href: "/super-admin/debugging-logs",
+          icon: Terminal,
+          badge: "Telemetry",
+          badgeVariant: "live",
         },
       ],
     },

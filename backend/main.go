@@ -321,6 +321,12 @@ func main() {
 			sa.PATCH("/ai-engines/:id/status", superAdminHandler.UpdateAIEngineStatus)
 			sa.DELETE("/ai-engines/:id", superAdminHandler.DeleteAIEngine)
 			sa.GET("/audit-logs", superAdminHandler.GetAuditLogs)
+
+			// Deep Call & Agent Telemetry Debugging Logs
+			sa.GET("/debugging-logs", superAdminHandler.GetDebuggingLogs)
+			sa.GET("/debugging-logs/:id", superAdminHandler.GetDebuggingLogByID)
+			sa.DELETE("/debugging-logs/:id", superAdminHandler.DeleteDebuggingLog)
+			sa.POST("/debugging-logs/purge", superAdminHandler.PurgeDebuggingLogs)
 		}
 	}
 
