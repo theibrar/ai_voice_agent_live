@@ -76,19 +76,24 @@ type FlexibleStartCallRequest struct {
 }
 
 type FlexibleEndCallRequest struct {
-	CallID            string `json:"call_id"`
-	TenantID          int    `json:"tenant_id"`
-	LeadID            string `json:"lead_id"`
-	Status            string `json:"status"`
-	Transcript        string `json:"transcript"`
-	Duration          int    `json:"duration"`
-	BilledMinutes     int    `json:"billed_minutes"`
-	RecordingURL      string `json:"recording_url"`
-	CallerName        string `json:"caller_name"`
-	CallerNumber      string `json:"caller_number"`
-	CalledDID         string `json:"called_did"`
-	AgentName         string `json:"agent_name"`
-	AppointmentBooked bool   `json:"appointment_booked"`
+	CallID            string  `json:"call_id"`
+	TenantID          int     `json:"tenant_id"`
+	LeadID            string  `json:"lead_id"`
+	Status            string  `json:"status"`
+	Transcript        string  `json:"transcript"`
+	Duration          int     `json:"duration"`
+	BilledMinutes     int     `json:"billed_minutes"`
+	RecordingURL      string  `json:"recording_url"`
+	CallerName        string  `json:"caller_name"`
+	CallerNumber      string  `json:"caller_number"`
+	CalledDID         string  `json:"called_did"`
+	AgentName         string  `json:"agent_name"`
+	AppointmentBooked bool    `json:"appointment_booked"`
+	DisconnectReason  string  `json:"disconnect_reason"`
+	ErrorReason       string  `json:"error_reason"`
+	SIPStatusCode     int     `json:"sip_status_code"`
+	JitterMs          float64 `json:"jitter_ms"`
+	PacketLoss        float64 `json:"packet_loss"`
 }
 
 func cleanDigits(s string) string {
@@ -313,10 +318,10 @@ func (h *CallsHandler) EndCall(c *gin.Context) {
 		req.Status = "completed"
 	}
 	if req.CallerNumber == "" {
-		req.CallerNumber = "+1 (555) 890-2341"
+		req.CallerNumber = "Inbound Lead"
 	}
 	if req.AgentName == "" {
-		req.AgentName = "Rachel (Enterprise SDR)"
+		req.AgentName = "Voice Agent"
 	}
 	if req.RecordingURL == "" || strings.Contains(req.RecordingURL, "storage.apexvoice.ai") || strings.Contains(req.RecordingURL, "storage.googleapis.com") {
 		req.RecordingURL = fmt.Sprintf("/api/v1/recordings/%s/audio", req.CallID)
@@ -333,15 +338,20 @@ func (h *CallsHandler) EndCall(c *gin.Context) {
 		notes = fmt.Sprintf("[Call Outcome: Appointment Booked] Call finalized successfully (%ds). Customer confirmed appointment. Calendar, Google Sheets & CRM synchronized.", req.Duration)
 	}
 
-	// 2. Upsert call record in database
+	// 2. Upsert call record in database with diagnostics
 	query := `
-		INSERT INTO call_records (call_id, tenant_id, caller_name, caller_number, called_did, agent_name, status, duration, transcript, recording_url, created_at, updated_at)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, NOW(), NOW())
+		INSERT INTO call_records (call_id, tenant_id, caller_name, caller_number, called_did, agent_name, status, duration, transcript, recording_url, disconnect_reason, error_reason, sip_status_code, jitter_ms, packet_loss, created_at, updated_at)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, NOW(), NOW())
 		ON CONFLICT (call_id) DO UPDATE SET
 			status = EXCLUDED.status,
 			duration = EXCLUDED.duration,
 			transcript = EXCLUDED.transcript,
 			recording_url = EXCLUDED.recording_url,
+			disconnect_reason = CASE WHEN EXCLUDED.disconnect_reason != '' THEN EXCLUDED.disconnect_reason ELSE call_records.disconnect_reason END,
+			error_reason = CASE WHEN EXCLUDED.error_reason != '' THEN EXCLUDED.error_reason ELSE call_records.error_reason END,
+			sip_status_code = CASE WHEN EXCLUDED.sip_status_code > 0 THEN EXCLUDED.sip_status_code ELSE call_records.sip_status_code END,
+			jitter_ms = CASE WHEN EXCLUDED.jitter_ms > 0 THEN EXCLUDED.jitter_ms ELSE call_records.jitter_ms END,
+			packet_loss = CASE WHEN EXCLUDED.packet_loss > 0 THEN EXCLUDED.packet_loss ELSE call_records.packet_loss END,
 			updated_at = NOW()`
 
 	callerName := req.CallerName
@@ -349,7 +359,26 @@ func (h *CallsHandler) EndCall(c *gin.Context) {
 		callerName = "Direct Caller"
 	}
 
-	_, _ = h.dbPool.Exec(ctx, query, req.CallID, req.TenantID, callerName, req.CallerNumber, req.CalledDID, req.AgentName, req.Status, req.Duration, req.Transcript, req.RecordingURL)
+	sipCode := req.SIPStatusCode
+	if sipCode == 0 {
+		if req.Status == "completed" {
+			sipCode = 200
+		} else if req.Status == "failed" {
+			sipCode = 503
+		} else if req.Status == "no_answer" {
+			sipCode = 487
+		} else if req.Status == "busy" {
+			sipCode = 486
+		} else {
+			sipCode = 200
+		}
+	}
+
+	_, _ = h.dbPool.Exec(ctx, query,
+		req.CallID, req.TenantID, callerName, req.CallerNumber, req.CalledDID,
+		req.AgentName, req.Status, req.Duration, req.Transcript, req.RecordingURL,
+		req.DisconnectReason, req.ErrorReason, sipCode, req.JitterMs, req.PacketLoss,
+	)
 
 	// 3. Upsert Contact in Contacts CRM Ledger
 	contactID := fmt.Sprintf("cont-%d", time.Now().UnixMilli())

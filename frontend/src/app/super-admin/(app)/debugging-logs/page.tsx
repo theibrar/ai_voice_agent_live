@@ -85,8 +85,8 @@ export default function SuperAdminDebuggingLogsPage() {
     agentsNotConnected: 0,
     recordingsMissing: 0,
     avgDurationSec: 0,
-    avgLatencyMs: 110,
-    packetLossAvg: 0.01,
+    avgLatencyMs: 0,
+    packetLossAvg: 0.0,
   });
 
   const [isLoading, setIsLoading] = useState(true);
@@ -704,19 +704,20 @@ export default function SuperAdminDebuggingLogsPage() {
               <div className="w-14 h-14 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center mx-auto">
                 <Terminal className="w-7 h-7" />
               </div>
-              <h3 className="font-bold text-sm text-[#0F172A]">No Matching Telemetry Logs</h3>
+              <h3 className="font-bold text-sm text-[#0F172A]">No Telemetry Logs in Database</h3>
               <p className="text-xs text-[#64748B] max-w-sm mx-auto">
-                No diagnostic records match your active query or filter. Real call logs will automatically stream in.
+                Connected to PostgreSQL database. When calls are placed or incoming SIP traffic occurs, real diagnostic records will stream in live.
               </p>
               <button
                 onClick={() => {
                   setSearchQuery("");
                   setStatusFilter("all");
                   setTenantFilter("all");
+                  fetchLogs(true);
                 }}
                 className="px-4 py-2 bg-[#3157D5] text-white text-xs font-bold rounded-xl cursor-pointer"
               >
-                Reset Filters
+                Refresh Database
               </button>
             </div>
           )}

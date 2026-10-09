@@ -2682,8 +2682,8 @@ func (h *SuperAdminHandler) GetDebuggingLogs(c *gin.Context) {
 		ALTER TABLE call_records ADD COLUMN IF NOT EXISTS error_reason VARCHAR(512) DEFAULT '';
 		ALTER TABLE call_records ADD COLUMN IF NOT EXISTS disconnect_reason VARCHAR(255) DEFAULT '';
 		ALTER TABLE call_records ADD COLUMN IF NOT EXISTS sip_status_code INT DEFAULT 200;
-		ALTER TABLE call_records ADD COLUMN IF NOT EXISTS jitter_ms DECIMAL(6,2) DEFAULT 14.5;
-		ALTER TABLE call_records ADD COLUMN IF NOT EXISTS packet_loss DECIMAL(6,4) DEFAULT 0.01;
+		ALTER TABLE call_records ADD COLUMN IF NOT EXISTS jitter_ms DECIMAL(6,2) DEFAULT 0.0;
+		ALTER TABLE call_records ADD COLUMN IF NOT EXISTS packet_loss DECIMAL(6,4) DEFAULT 0.0;
 	`)
 
 	statusFilter := c.Query("status")
@@ -2694,12 +2694,12 @@ func (h *SuperAdminHandler) GetDebuggingLogs(c *gin.Context) {
 			c.id::text,
 			COALESCE(c.call_id, c.id::text) AS call_id,
 			COALESCE(c.tenant_id, 1) AS tenant_id,
-			COALESCE(t.tenant_name, 'Apex Voice Enterprise') AS tenant_name,
-			COALESCE(c.agent_id, 'agent-solar-1') AS agent_id,
-			COALESCE(c.agent_name, 'Rachel (Enterprise SDR)') AS agent_name,
-			COALESCE(c.caller_name, 'Customer Lead') AS caller_name,
-			COALESCE(c.caller_number, '+1 (555) 000-0000') AS caller_number,
-			COALESCE(c.called_did, '+1 (415) 639-0491') AS called_did,
+			COALESCE(t.tenant_name, 'Direct Organization') AS tenant_name,
+			COALESCE(c.agent_id, '') AS agent_id,
+			COALESCE(c.agent_name, 'Live Voice Agent') AS agent_name,
+			COALESCE(c.caller_name, '') AS caller_name,
+			COALESCE(c.caller_number, '') AS caller_number,
+			COALESCE(c.called_did, '') AS called_did,
 			COALESCE(c.status, 'completed') AS status,
 			COALESCE(c.duration, 0) AS duration,
 			COALESCE(c.recording_url, '') AS recording_url,
@@ -2709,8 +2709,8 @@ func (h *SuperAdminHandler) GetDebuggingLogs(c *gin.Context) {
 			COALESCE(c.llm_model, 'Qwen/Qwen2.5-7B-Instruct-AWQ') AS llm_model,
 			COALESCE(c.tts_model, 'Kokoro-82M') AS tts_model,
 			COALESCE(c.stt_model, 'Faster-Whisper distil-large-v3') AS stt_model,
-			COALESCE(c.jitter_ms, 14.5) AS jitter_ms,
-			COALESCE(c.packet_loss, 0.01) AS packet_loss,
+			COALESCE(c.jitter_ms::float8, 0.0) AS jitter_ms,
+			COALESCE(c.packet_loss::float8, 0.0) AS packet_loss,
 			COALESCE(c.transcript, '') AS transcript,
 			c.created_at
 		FROM call_records c
@@ -2733,171 +2733,85 @@ func (h *SuperAdminHandler) GetDebuggingLogs(c *gin.Context) {
 				&l.Status, &l.Duration, &l.RecordingURL, &l.SIPStatusCode,
 				&l.DisconnectReason, &l.ErrorReason, &l.LLMModel, &l.TTSModel, &l.STTModel,
 				&l.JitterMs, &l.PacketLoss, &l.Transcript, &createdAt,
-			); scanErr == nil {
-				l.CreatedAt = createdAt.Format(time.RFC3339)
-
-				// Analyze agent connection status
-				l.AgentConnected = l.AgentName != "" && l.Status != "agent_unreachable" && !strings.Contains(strings.ToLower(l.ErrorReason), "agent disconnect")
-
-				// Analyze recording vault status
-				hasRecording := l.RecordingURL != "" && !strings.Contains(l.RecordingURL, "storage.apexvoice.ai") && l.Duration > 0
-				l.RecordingRecorded = hasRecording
-
-				// Set default disconnect reasoning if empty
-				if l.DisconnectReason == "" {
-					if l.Status == "completed" {
-						l.DisconnectReason = "Normal Clearing (Caller Hangup)"
-					} else if l.Status == "failed" {
-						l.DisconnectReason = "SIP 503 Carrier Gateway Failure"
-					} else if l.Status == "no_answer" {
-						l.DisconnectReason = "SIP 487 Request Terminated (Ring Timeout 30s)"
-					} else if l.Status == "busy" {
-						l.DisconnectReason = "SIP 486 Busy Here (Line Engaged)"
-					} else {
-						l.DisconnectReason = "Client Network Terminated"
-					}
-				}
-
-				// Apply search query filter
-				if searchQuery != "" {
-					matches := strings.Contains(strings.ToLower(l.CallID), searchQuery) ||
-						strings.Contains(strings.ToLower(l.CallerNumber), searchQuery) ||
-						strings.Contains(strings.ToLower(l.AgentName), searchQuery) ||
-						strings.Contains(strings.ToLower(l.TenantName), searchQuery) ||
-						strings.Contains(strings.ToLower(l.ErrorReason), searchQuery) ||
-						strings.Contains(strings.ToLower(l.DisconnectReason), searchQuery)
-					if !matches {
-						continue
-					}
-				}
-
-				// Apply status filter
-				if statusFilter == "failed" && l.Status != "failed" && l.SIPStatusCode < 400 && l.ErrorReason == "" {
-					continue
-				} else if statusFilter == "agent_not_connected" && l.AgentConnected {
-					continue
-				} else if statusFilter == "recording_missing" && l.RecordingRecorded {
-					continue
-				} else if statusFilter == "completed" && l.Status != "completed" {
-					continue
-				}
-
-				logs = append(logs, l)
+			); scanErr != nil {
+				fmt.Printf("[DEBUGGING-LOGS] scan error on row: %v\n", scanErr)
+				continue
 			}
+
+			l.CreatedAt = createdAt.Format(time.RFC3339)
+
+			// Clean fallback presentation for caller number and trunk DID
+			if l.CallerNumber == "" {
+				l.CallerNumber = "Direct Inbound"
+			}
+			if l.CalledDID == "" {
+				l.CalledDID = "Default Trunk"
+			}
+
+			// Real Agent Connection evaluation:
+			isWorkerTimeout := strings.Contains(strings.ToLower(l.ErrorReason), "worker") ||
+				strings.Contains(strings.ToLower(l.ErrorReason), "agent-worker") ||
+				strings.Contains(strings.ToLower(l.ErrorReason), "dispatch error") ||
+				strings.Contains(strings.ToLower(l.ErrorReason), "agent disconnect") ||
+				strings.Contains(strings.ToLower(l.DisconnectReason), "timeout") ||
+				l.Status == "agent_unreachable" || l.Status == "no_worker"
+
+			l.AgentConnected = !isWorkerTimeout && l.AgentName != ""
+
+			// Real Recording Vault evaluation:
+			hasRecording := l.RecordingURL != "" && !strings.Contains(l.RecordingURL, "storage.apexvoice.ai") && l.Duration > 0
+			l.RecordingRecorded = hasRecording
+
+			// Disconnect Cause standard mapping if not explicitly logged by carrier
+			if l.DisconnectReason == "" {
+				if l.Status == "completed" {
+					l.DisconnectReason = "Normal Clearing (200 OK)"
+				} else if l.Status == "failed" {
+					l.DisconnectReason = "SIP 503 Carrier Gateway Failure"
+				} else if l.Status == "no_answer" {
+					l.DisconnectReason = "SIP 487 Request Terminated (Ring Timeout)"
+				} else if l.Status == "busy" {
+					l.DisconnectReason = "SIP 486 Busy Here (Line Engaged)"
+				} else if l.Status == "in_progress" {
+					l.DisconnectReason = "Call Active / In Progress"
+				} else {
+					l.DisconnectReason = "Call Disconnected"
+				}
+			}
+
+			// Apply search filter
+			if searchQuery != "" {
+				matches := strings.Contains(strings.ToLower(l.CallID), searchQuery) ||
+					strings.Contains(strings.ToLower(l.CallerNumber), searchQuery) ||
+					strings.Contains(strings.ToLower(l.AgentName), searchQuery) ||
+					strings.Contains(strings.ToLower(l.TenantName), searchQuery) ||
+					strings.Contains(strings.ToLower(l.ErrorReason), searchQuery) ||
+					strings.Contains(strings.ToLower(l.DisconnectReason), searchQuery)
+				if !matches {
+					continue
+				}
+			}
+
+			// Apply status filter
+			if statusFilter == "failed" && l.Status != "failed" && l.SIPStatusCode < 400 && l.ErrorReason == "" {
+				continue
+			} else if statusFilter == "agent_not_connected" && l.AgentConnected {
+				continue
+			} else if statusFilter == "recording_missing" && l.RecordingRecorded {
+				continue
+			} else if statusFilter == "completed" && (l.Status != "completed" || !l.AgentConnected) {
+				continue
+			}
+
+			logs = append(logs, l)
 		}
 	}
 
-	// If database is clean or empty, provide realistic diagnostic telemetry sessions
-	if len(logs) == 0 && searchQuery == "" && (statusFilter == "" || statusFilter == "all") {
-		logs = []DebuggingCallLog{
-			{
-				ID:                "diag-101",
-				CallID:            "call-sip-998201",
-				TenantID:          1,
-				TenantName:        "Apex Voice Enterprise",
-				AgentID:           "agent-solar-1",
-				AgentName:         "Marcus (Solar Advisor)",
-				AgentConnected:    true,
-				CallerName:        "Michael Scott",
-				CallerNumber:      "+1 (415) 890-2341",
-				CalledDID:         "+1 (415) 384-5276",
-				Status:            "completed",
-				Duration:          142,
-				RecordingURL:      "/api/v1/recordings/call-sim-001/audio",
-				RecordingRecorded: true,
-				SIPStatusCode:     200,
-				DisconnectReason:  "Normal Clearing (Call Goal Met)",
-				ErrorReason:       "",
-				LLMModel:          "Qwen/Qwen2.5-7B-Instruct-AWQ",
-				TTSModel:          "Kokoro-82M",
-				STTModel:          "Faster-Whisper distil-large-v3",
-				JitterMs:          11.2,
-				PacketLoss:        0.002,
-				Transcript:        "Agent: Hello, Marcus with Apex Solar. How are you?\nCaller: I need a commercial battery consultation.\nAgent: Great! Scheduled for Thursday.",
-				CreatedAt:         time.Now().Add(-15 * time.Minute).Format(time.RFC3339),
-			},
-			{
-				ID:                "diag-102",
-				CallID:            "call-sip-998202",
-				TenantID:          1,
-				TenantName:        "Apex Voice Enterprise",
-				AgentID:           "agent-sdr-2",
-				AgentName:         "Rachel (Enterprise SDR)",
-				AgentConnected:    false,
-				CallerName:        "David Wallace",
-				CallerNumber:      "+1 (212) 555-0199",
-				CalledDID:         "+1 (415) 639-0491",
-				Status:            "failed",
-				Duration:          4,
-				RecordingURL:      "",
-				RecordingRecorded: false,
-				SIPStatusCode:     500,
-				DisconnectReason:  "Agent Worker WebSocket Room Join Timeout",
-				ErrorReason:       "Agent Dispatch Error: LiveKit agent-worker did not respond within 4000ms. Room closed.",
-				LLMModel:          "Qwen/Qwen2.5-7B-Instruct-AWQ",
-				TTSModel:          "Kokoro-82M",
-				STTModel:          "Faster-Whisper distil-large-v3",
-				JitterMs:          48.5,
-				PacketLoss:        0.052,
-				Transcript:        "SYSTEM ALERT: Agent failed to establish real-time audio pipeline before caller hangup.",
-				CreatedAt:         time.Now().Add(-42 * time.Minute).Format(time.RFC3339),
-			},
-			{
-				ID:                "diag-103",
-				CallID:            "call-sip-998203",
-				TenantID:          1,
-				TenantName:        "Apex Voice Enterprise",
-				AgentID:           "agent-solar-1",
-				AgentName:         "Marcus (Solar Advisor)",
-				AgentConnected:    true,
-				CallerName:        "Jim Halpert",
-				CallerNumber:      "+1 (570) 555-0144",
-				CalledDID:         "+1 (415) 384-5276",
-				Status:            "completed",
-				Duration:          86,
-				RecordingURL:      "",
-				RecordingRecorded: false,
-				SIPStatusCode:     200,
-				DisconnectReason:  "Caller Disconnected",
-				ErrorReason:       "Recording Sync Warning: Audio Vault egress dropped during carrier transfer.",
-				LLMModel:          "Qwen/Qwen2.5-7B-Instruct-AWQ",
-				TTSModel:          "Kokoro-82M",
-				STTModel:          "Faster-Whisper distil-large-v3",
-				JitterMs:          18.4,
-				PacketLoss:        0.008,
-				Transcript:        "Agent: Hello Jim! Following up on your solar survey.\nCaller: Yes, please email the layout.\nAgent: Sent!",
-				CreatedAt:         time.Now().Add(-1 * time.Hour).Format(time.RFC3339),
-			},
-			{
-				ID:                "diag-104",
-				CallID:            "call-sip-998204",
-				TenantID:          1,
-				TenantName:        "Apex Voice Enterprise",
-				AgentID:           "agent-sdr-2",
-				AgentName:         "Rachel (Enterprise SDR)",
-				AgentConnected:    false,
-				CallerName:        "Dwight Schrute",
-				CallerNumber:      "+1 (570) 555-0133",
-				CalledDID:         "+1 (415) 639-0491",
-				Status:            "no_answer",
-				Duration:          0,
-				RecordingURL:      "",
-				RecordingRecorded: false,
-				SIPStatusCode:     487,
-				DisconnectReason:  "SIP 487 Request Terminated (Ring Timeout 30s)",
-				ErrorReason:       "No Audio Handshake: Caller did not answer outbound dialer attempt.",
-				LLMModel:          "Qwen/Qwen2.5-7B-Instruct-AWQ",
-				TTSModel:          "Kokoro-82M",
-				STTModel:          "Faster-Whisper distil-large-v3",
-				JitterMs:          0.0,
-				PacketLoss:        0.0,
-				Transcript:        "[Unanswered Outbound Dial attempt by automated carrier]",
-				CreatedAt:         time.Now().Add(-2 * time.Hour).Format(time.RFC3339),
-			},
-		}
+	if logs == nil {
+		logs = []DebuggingCallLog{}
 	}
 
-	// Compute Live Metrics
+	// Compute Live Metrics from real database logs
 	metrics := DebuggingMetrics{
 		TotalCalls: len(logs),
 	}
@@ -2924,7 +2838,11 @@ func (h *SuperAdminHandler) GetDebuggingLogs(c *gin.Context) {
 
 	if metrics.TotalCalls > 0 {
 		metrics.AvgDurationSec = totalDur / metrics.TotalCalls
-		metrics.AvgLatencyMs = 95 + (totalLatency / metrics.TotalCalls)
+		if totalLatency > 0 {
+			metrics.AvgLatencyMs = totalLatency / metrics.TotalCalls
+		} else {
+			metrics.AvgLatencyMs = 0
+		}
 		metrics.PacketLossAvg = totalLoss / float64(metrics.TotalCalls)
 	}
 
@@ -2947,12 +2865,12 @@ func (h *SuperAdminHandler) GetDebuggingLogByID(c *gin.Context) {
 			c.id::text,
 			COALESCE(c.call_id, c.id::text) AS call_id,
 			COALESCE(c.tenant_id, 1) AS tenant_id,
-			COALESCE(t.tenant_name, 'Apex Voice Enterprise') AS tenant_name,
-			COALESCE(c.agent_id, 'agent-solar-1') AS agent_id,
-			COALESCE(c.agent_name, 'Rachel (Enterprise SDR)') AS agent_name,
-			COALESCE(c.caller_name, 'Direct Caller') AS caller_name,
-			COALESCE(c.caller_number, '+1 (555) 000-0000') AS caller_number,
-			COALESCE(c.called_did, '+1 (415) 639-0491') AS called_did,
+			COALESCE(t.tenant_name, 'Direct Organization') AS tenant_name,
+			COALESCE(c.agent_id, '') AS agent_id,
+			COALESCE(c.agent_name, 'Live Voice Agent') AS agent_name,
+			COALESCE(c.caller_name, '') AS caller_name,
+			COALESCE(c.caller_number, '') AS caller_number,
+			COALESCE(c.called_did, '') AS called_did,
 			COALESCE(c.status, 'completed') AS status,
 			COALESCE(c.duration, 0) AS duration,
 			COALESCE(c.recording_url, '') AS recording_url,
@@ -2962,8 +2880,8 @@ func (h *SuperAdminHandler) GetDebuggingLogByID(c *gin.Context) {
 			COALESCE(c.llm_model, 'Qwen/Qwen2.5-7B-Instruct-AWQ') AS llm_model,
 			COALESCE(c.tts_model, 'Kokoro-82M') AS tts_model,
 			COALESCE(c.stt_model, 'Faster-Whisper distil-large-v3') AS stt_model,
-			COALESCE(c.jitter_ms, 14.5) AS jitter_ms,
-			COALESCE(c.packet_loss, 0.01) AS packet_loss,
+			COALESCE(c.jitter_ms::float8, 0.0) AS jitter_ms,
+			COALESCE(c.packet_loss::float8, 0.0) AS packet_loss,
 			COALESCE(c.transcript, '') AS transcript,
 			c.created_at
 		FROM call_records c
@@ -2984,7 +2902,21 @@ func (h *SuperAdminHandler) GetDebuggingLogByID(c *gin.Context) {
 	}
 
 	l.CreatedAt = createdAt.Format(time.RFC3339)
-	l.AgentConnected = l.AgentName != "" && l.Status != "agent_unreachable" && !strings.Contains(strings.ToLower(l.ErrorReason), "agent disconnect")
+	if l.CallerNumber == "" {
+		l.CallerNumber = "Direct Inbound"
+	}
+	if l.CalledDID == "" {
+		l.CalledDID = "Default Trunk"
+	}
+
+	isWorkerTimeout := strings.Contains(strings.ToLower(l.ErrorReason), "worker") ||
+		strings.Contains(strings.ToLower(l.ErrorReason), "agent-worker") ||
+		strings.Contains(strings.ToLower(l.ErrorReason), "dispatch error") ||
+		strings.Contains(strings.ToLower(l.ErrorReason), "agent disconnect") ||
+		strings.Contains(strings.ToLower(l.DisconnectReason), "timeout") ||
+		l.Status == "agent_unreachable" || l.Status == "no_worker"
+
+	l.AgentConnected = !isWorkerTimeout && l.AgentName != ""
 	l.RecordingRecorded = l.RecordingURL != "" && !strings.Contains(l.RecordingURL, "storage.apexvoice.ai") && l.Duration > 0
 
 	c.JSON(http.StatusOK, gin.H{"log": l})
@@ -3009,12 +2941,18 @@ func (h *SuperAdminHandler) PurgeDebuggingLogs(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	tag, err := h.db.Exec(ctx, `
+	deleteQuery := `
 		DELETE FROM call_records 
 		WHERE caller_name = 'Direct Caller' 
+		   OR caller_number LIKE '+1 (555) 000-0000%'
 		   OR status IN ('failed', 'busy', 'no_answer') 
 		   OR error_reason != ''
-	`)
+	`
+	if c.Query("all") == "true" {
+		deleteQuery = `DELETE FROM call_records`
+	}
+
+	tag, err := h.db.Exec(ctx, deleteQuery)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
