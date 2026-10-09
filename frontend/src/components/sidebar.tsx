@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { translate } from "@/lib/languages";
 import { cn } from "@/lib/utils";
 import {
+  ShieldAlert,
   BarChart3,
   PhoneCall,
   Bot,
@@ -130,6 +131,13 @@ export function Sidebar() {
         { label: translate("templates", language), href: "/templates", icon: FileText },
         { label: translate("credits_billing", language), href: "/credits", icon: Coins, badge: `$${Math.round(activeWorkspace.credits)}` },
         { label: translate("settings", language), href: "/settings", icon: Settings },
+      ],
+    },
+    {
+      title: "Super Admin Console",
+      items: [
+        { label: "Super Admin Portal", href: "/super-admin", icon: ShieldAlert, badge: "Master", badgeVariant: "live" },
+        { label: "Debugging Logs", href: "/super-admin/debugging-logs", icon: ShieldAlert, badge: "Logs", badgeVariant: "info" },
       ],
     },
   ];

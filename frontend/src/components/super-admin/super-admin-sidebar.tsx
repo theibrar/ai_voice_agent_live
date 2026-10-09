@@ -15,6 +15,8 @@ import {
   CreditCard,
   Mail,
   PhoneCall,
+  Bot,
+  Calendar,
   Cpu,
   ShieldCheck,
   ChevronLeft,
@@ -75,6 +77,39 @@ function SuperAdminSidebarContent() {
     {
       items: [
         { label: "Mission Control", href: "/super-admin", icon: BarChart3 },
+      ],
+    },
+    {
+      title: "Voice Operations & Testing",
+      items: [
+        {
+          label: "Live Call Cockpit",
+          href: "/live-calls",
+          icon: PhoneCall,
+          badge: `${activeLiveCalls} Active`,
+          badgeVariant: "live",
+        },
+        {
+          label: "AI Voice Agents",
+          href: "/agents",
+          icon: Bot,
+          badge: "Cockpit",
+          badgeVariant: "info",
+        },
+        {
+          label: "Calendar Appointments",
+          href: "/appointments",
+          icon: Calendar,
+          badge: "Database",
+          badgeVariant: "neutral",
+        },
+        {
+          label: "Tenant Portal Console",
+          href: "/dashboard",
+          icon: ExternalLink,
+          badge: "Switch",
+          badgeVariant: "info",
+        },
       ],
     },
     {
