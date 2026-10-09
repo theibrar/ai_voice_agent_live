@@ -71,40 +71,8 @@ const DEFAULT_RECORDINGS: AudioRecordingItem[] = [];
 export default function VoiceRecorderPage() {
   const { calls, agents, addToast } = useAppStore();
 
-  // 1. Initial State: Auto-aggregates store calls or starts clean at 0
-  const [recordingsList, setRecordingsList] = useState<AudioRecordingItem[]>(() => {
-    if (calls && calls.length > 0) {
-      const mappedStoreCalls: AudioRecordingItem[] = calls.map((c, i) => ({
-        id: c.id || `rec-store-${i}`,
-        callerName: c.callerName || "Customer Lead",
-        callerNumber: c.callerNumber || "+1 (555) 234-8901",
-        agentName: c.agentName || "Rachel (Enterprise SDR)",
-        startedAt: c.startedAt || new Date(Date.now() - i * 3600000).toISOString(),
-        durationSeconds: c.durationSeconds || 120,
-        sentiment: c.sentiment || "positive",
-        sentimentScore: c.sentimentScore || 85,
-        qualificationStatus: (c.qualificationStatus as any) || "qualified",
-        qualificationScore: c.qualificationScore || 90,
-        recordingUrl: c.recordingUrl || (c as any).recording_url || `${getApiBase()}/recordings/${c.id || i}/audio`,
-        fileSizeKb: Math.round((c.durationSeconds || 120) * 15),
-        format: "WAV 16kHz PCM",
-        source: "ai_voice_agent",
-        transcriptSummary: c.summary || "Full conversational audio recording with dual-channel transcription.",
-        transcript: c.transcript && c.transcript.length > 0
-          ? c.transcript.map((t) => ({
-              speaker: (t.speaker as any) || "agent",
-              text: t.text,
-              timestamp: t.timestamp ? (typeof t.timestamp === "number" ? `${t.timestamp}s` : t.timestamp) : "0:10",
-            }))
-          : [
-              { speaker: "agent", text: "Hello! Thank you for contacting Apex Voice. How can I assist you today?", timestamp: "0:02" },
-              { speaker: "caller", text: "Hi, I wanted to inquire about automated voice scheduling.", timestamp: "0:08" },
-            ],
-      }));
-      return mappedStoreCalls;
-    }
-    return DEFAULT_RECORDINGS;
-  });
+  // 1. Initial State: Real recordings start clean at 0
+  const [recordingsList, setRecordingsList] = useState<AudioRecordingItem[]>([]);
 
   // 2. Search, Date Range Filter, Agent & Source State
   const [searchQuery, setSearchQuery] = useState("");
@@ -260,15 +228,48 @@ export default function VoiceRecorderPage() {
     addToast({ title: "Recording Reordered", description: "Moved recording position down in vault.", type: "info" });
   };
 
-  // Delete recording
-  const handleDeleteRecording = (id: string, name: string) => {
+  // Delete recording from state AND backend database
+  const handleDeleteRecording = async (id: string, name: string) => {
     if (playingId === id) handleStopPlayback();
     setRecordingsList((prev) => prev.filter((r) => r.id !== id));
+    try {
+      await fetch(`${getApiBase()}/calls/${id}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+    } catch (err) {
+      console.warn("Failed to delete recording on backend:", err);
+    }
     addToast({
       title: "Recording Deleted",
       description: `Removed audio recording for '${name}' from storage vault.`,
       type: "info",
     });
+  };
+
+  // Purge all simulated/dummy records from database and UI
+  const handlePurgeFakeRecordings = async () => {
+    try {
+      const res = await fetch(`${getApiBase()}/recordings/clear-dummy`, {
+        method: "POST",
+        credentials: "include",
+      });
+      const data = await res.json().catch(() => ({}));
+      setRecordingsList([]);
+      addToast({
+        title: "Vault Purged",
+        description: data.message || "All fake and simulated records have been cleared from the database vault.",
+        type: "success",
+      });
+    } catch (err) {
+      console.warn("Failed to purge fake recordings:", err);
+      setRecordingsList([]);
+      addToast({
+        title: "Recordings Cleared",
+        description: "Cleared simulated audio records from local view.",
+        type: "success",
+      });
+    }
   };
 
   // Download real audio WAV
@@ -326,12 +327,20 @@ export default function VoiceRecorderPage() {
     const activeCount = activeAgents.length;
 
     try {
-      const apiUrl = `${getApiBase()}/calls`;
+      const apiUrl = `${getApiBase()}/calls?only_recordings=true`;
       const res = await fetch(apiUrl, { credentials: "include" });
       if (res.ok) {
         const data = await res.json();
-        if (data && Array.isArray(data.calls) && data.calls.length > 0) {
-          const mapped: AudioRecordingItem[] = data.calls.map((c: any, i: number) => {
+        if (data && Array.isArray(data.calls)) {
+          // Strictly exclude fake dummy recordings (Direct Caller with numerical placeholder phone, or dummy storage links)
+          const realCalls = data.calls.filter((c: any) => {
+            const isDirectCaller = c.callerName === "Direct Caller";
+            const isPlaceholderPhone = /^\d{3,5}$/.test(c.callerNumber || "");
+            const isFakeStorage = c.recordingUrl && (c.recordingUrl.includes("storage.apexvoice.ai") || c.recordingUrl.includes("call-sim-"));
+            return !isDirectCaller && !isPlaceholderPhone && !isFakeStorage;
+          });
+
+          const mapped: AudioRecordingItem[] = realCalls.map((c: any, i: number) => {
             const parsedTranscript = typeof c.transcript === "string" && c.transcript.trim().length > 0
               ? c.transcript.split("\n").filter((l: string) => l.trim()).map((line: string, idx: number) => {
                   const isCaller = line.toLowerCase().startsWith("user:") || line.toLowerCase().startsWith("caller:");
@@ -375,7 +384,7 @@ export default function VoiceRecorderPage() {
       setIsSyncingAgents(false);
       addToast({
         title: "AI Voice Stream Synced",
-        description: `Auto-captured latest audio sessions from all ${activeCount} active AI Voice Agent${activeCount === 1 ? "" : "s"}. Total ${recordingsList.length} tracks updated.`,
+        description: `Synced real audio sessions from active AI Voice Agents. Total ${recordingsList.length} tracks in vault.`,
         type: "success",
       });
     }
@@ -613,7 +622,17 @@ export default function VoiceRecorderPage() {
               {filteredRecordings.length} Recorded Tracks
             </span>
           </div>
-          <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">Click Play to stream dual-channel audio with real-time waveform seek</span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={handlePurgeFakeRecordings}
+              className="px-3 py-1 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5"
+              title="Purge all simulated and fake recording tracks from database"
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+              <span>Purge Fake Tracks</span>
+            </button>
+            <span className="text-[11px] text-[#64748B] dark:text-[#94A3B8]">Click Play to stream dual-channel audio with real-time waveform seek</span>
+          </div>
         </div>
 
         <div className="divide-y divide-[#E2E8F0] dark:divide-[#1E293B]">

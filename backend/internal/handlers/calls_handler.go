@@ -451,6 +451,7 @@ func (h *CallsHandler) GetTenantCalls(c *gin.Context) {
 		}
 	}
 
+	onlyRecordings := c.Query("only_recordings") == "true"
 	query := `
 		SELECT 
 			COALESCE(call_id, id::text) AS id,
@@ -463,9 +464,13 @@ func (h *CallsHandler) GetTenantCalls(c *gin.Context) {
 			COALESCE(transcript, '') AS transcript,
 			COALESCE(recording_url, '') AS recording_url
 		FROM call_records
-		WHERE tenant_id = $1 OR tenant_id IS NULL
-		ORDER BY created_at DESC
-		LIMIT 100`
+		WHERE (tenant_id = $1 OR tenant_id IS NULL)`
+
+	if onlyRecordings {
+		query += ` AND caller_name != 'Direct Caller' AND caller_number !~ '^[0-9]{3,5}$' AND recording_url != '' AND recording_url NOT LIKE '%storage.apexvoice.ai%'`
+	}
+
+	query += ` ORDER BY created_at DESC LIMIT 100`
 
 	rows, err := h.dbPool.Query(ctx, query, tenantID)
 	if err != nil {
@@ -503,6 +508,45 @@ func (h *CallsHandler) GetTenantCalls(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, gin.H{"calls": callsList})
+}
+
+// DELETE /api/v1/calls/:id and DELETE /api/v1/recordings/:id
+func (h *CallsHandler) DeleteCall(c *gin.Context) {
+	id := c.Param("id")
+	if id == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing call id parameter"})
+		return
+	}
+	ctx := c.Request.Context()
+	_, _ = h.dbPool.Exec(ctx, `DELETE FROM call_records WHERE call_id = $1 OR id::text = $1`, id)
+
+	// Clean physical audio if saved
+	recordingsDir := getRecordingsDir()
+	cleanID := strings.TrimSuffix(strings.TrimSuffix(id, ".wav"), ".mp3")
+	_ = os.Remove(filepath.Join(recordingsDir, cleanID+".wav"))
+	_ = os.Remove(filepath.Join(recordingsDir, cleanID+".mp3"))
+
+	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Call recording deleted successfully"})
+}
+
+// POST /api/v1/recordings/clear-dummy
+func (h *CallsHandler) ClearFakeRecordings(c *gin.Context) {
+	ctx := c.Request.Context()
+	tag, err := h.dbPool.Exec(ctx, `
+		DELETE FROM call_records 
+		WHERE caller_name = 'Direct Caller' 
+		   OR caller_number ~ '^[0-9]{3,5}$'
+		   OR recording_url LIKE '%storage.apexvoice.ai%'
+	`)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": fmt.Sprintf("Removed %d fake/simulated recordings from database vault", tag.RowsAffected()),
+		"deleted": tag.RowsAffected(),
+	})
 }
 
 // ─────────────────────────────────────────────────────────────────────────────

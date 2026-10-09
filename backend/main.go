@@ -120,6 +120,10 @@ func main() {
 		api.POST("/calls/end", callsHandler.EndCall)
 		api.POST("/calls/recordings/upload", callsHandler.UploadRecording)
 		api.GET("/recordings/:id/audio", callsHandler.StreamRecordingAudio)
+		api.DELETE("/calls/:id", callsHandler.DeleteCall)
+		api.DELETE("/recordings/:id", callsHandler.DeleteCall)
+		api.POST("/recordings/clear-dummy", callsHandler.ClearFakeRecordings)
+		api.DELETE("/recordings/fake", callsHandler.ClearFakeRecordings)
 		api.POST("/tts/synthesize", ttsHandler.SynthesizeSpeech)
 		api.POST("/rag/search", ragHandler.Search)
 		api.POST("/rag/query", ragHandler.Search)
@@ -157,6 +161,10 @@ func main() {
 
 			// Live Calls & Recordings
 			tenantGroup.GET("/calls", callsHandler.GetTenantCalls)
+			tenantGroup.DELETE("/calls/:id", callsHandler.DeleteCall)
+			tenantGroup.DELETE("/recordings/:id", callsHandler.DeleteCall)
+			tenantGroup.POST("/recordings/clear-dummy", callsHandler.ClearFakeRecordings)
+			tenantGroup.DELETE("/recordings/fake", callsHandler.ClearFakeRecordings)
 
 			// Unified CRM Contacts & Leads
 			tenantGroup.GET("/contacts", contactsHandler.GetContacts)
