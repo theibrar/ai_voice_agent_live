@@ -85,9 +85,9 @@ export default function VoiceRecorderPage() {
         sentimentScore: c.sentimentScore || 85,
         qualificationStatus: (c.qualificationStatus as any) || "qualified",
         qualificationScore: c.qualificationScore || 90,
-        recordingUrl: c.recordingUrl || `https://storage.googleapis.com/apex-recordings/${c.id || i}.mp3`,
+        recordingUrl: c.recordingUrl || (c as any).recording_url || `${getApiBase()}/recordings/${c.id || i}/audio`,
         fileSizeKb: Math.round((c.durationSeconds || 120) * 15),
-        format: "MP3 24kHz HD",
+        format: "WAV 16kHz PCM",
         source: "ai_voice_agent",
         transcriptSummary: c.summary || "Full conversational audio recording with dual-channel transcription.",
         transcript: c.transcript && c.transcript.length > 0
@@ -123,46 +123,117 @@ export default function VoiceRecorderPage() {
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [isMuted, setIsMuted] = useState(false);
   const [volume, setVolume] = useState(80);
-  const playbackTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Helper to resolve accurate playable audio recording URL
+  const getRecordingAudioUrl = (rec: AudioRecordingItem) => {
+    if (rec.recordingUrl && !rec.recordingUrl.includes("storage.apexvoice.ai") && !rec.recordingUrl.includes("storage.googleapis.com")) {
+      if (rec.recordingUrl.startsWith("http://") || rec.recordingUrl.startsWith("https://")) {
+        return rec.recordingUrl;
+      }
+      const base = getApiBase().replace(/\/api\/v1\/?$/, "");
+      return `${base}${rec.recordingUrl.startsWith("/") ? "" : "/"}${rec.recordingUrl}`;
+    }
+    return `${getApiBase()}/recordings/${rec.id}/audio`;
+  };
 
   // 4. Modals State
   const [transcriptModalItem, setTranscriptModalItem] = useState<AudioRecordingItem | null>(null);
 
-  // Audio Playback Simulation
+  // Real Audio Playback via HTML5 Audio Element
   const togglePlay = (id: string) => {
     if (playingId === id) {
-      setPlayingId(null);
-      if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
-    } else {
-      setPlayingId(id);
-      setPlaybackProgress(0);
-      if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
-
-      const targetRec = recordingsList.find((r) => r.id === id);
-      const totalSec = targetRec ? targetRec.durationSeconds : 60;
-
-      playbackTimerRef.current = setInterval(() => {
-        setPlaybackProgress((prev) => {
-          if (prev >= 100) {
-            if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
-            setPlayingId(null);
-            return 0;
-          }
-          return prev + 100 / (totalSec * 10);
-        });
-      }, 100 / playbackSpeed);
+      if (audioRef.current) {
+        if (!audioRef.current.paused) {
+          audioRef.current.pause();
+          setPlayingId(null);
+        } else {
+          audioRef.current.play().catch(() => {});
+          setPlayingId(id);
+        }
+      } else {
+        setPlayingId(null);
+      }
+      return;
     }
+
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.src = "";
+    }
+
+    const targetRec = recordingsList.find((r) => r.id === id);
+    if (!targetRec) return;
+
+    const audioUrl = getRecordingAudioUrl(targetRec);
+    const audio = new Audio(audioUrl);
+    audio.playbackRate = playbackSpeed;
+    audio.volume = isMuted ? 0 : volume / 100;
+
+    audio.ontimeupdate = () => {
+      if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
+        setPlaybackProgress((audio.currentTime / audio.duration) * 100);
+      }
+    };
+
+    audio.onended = () => {
+      setPlayingId(null);
+      setPlaybackProgress(0);
+    };
+
+    audio.onerror = () => {
+      console.warn("Audio element failed to load stream:", audioUrl);
+      setPlayingId(null);
+    };
+
+    audioRef.current = audio;
+    audio.play().catch((err) => {
+      console.warn("Playback error or autoplay blocked:", err);
+    });
+    setPlayingId(id);
+    setPlaybackProgress(0);
   };
 
   const handleStopPlayback = () => {
-    if (playbackTimerRef.current) clearInterval(playbackTimerRef.current);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     setPlayingId(null);
     setPlaybackProgress(0);
   };
 
   const handleSeek = (newPercent: number) => {
-    setPlaybackProgress(Math.max(0, Math.min(100, newPercent)));
+    const clamped = Math.max(0, Math.min(100, newPercent));
+    setPlaybackProgress(clamped);
+    if (audioRef.current && audioRef.current.duration && !isNaN(audioRef.current.duration)) {
+      audioRef.current.currentTime = (clamped / 100) * audioRef.current.duration;
+    }
   };
+
+  // Sync speed changes to running audio element
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackSpeed;
+    }
+  }, [playbackSpeed]);
+
+  // Sync volume / mute changes to running audio element
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume / 100;
+    }
+  }, [volume, isMuted]);
+
+  // Clean up audio on unmount
+  useEffect(() => {
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
 
   // Reorder functions
   const handleMoveUp = (index: number) => {
@@ -200,22 +271,19 @@ export default function VoiceRecorderPage() {
     });
   };
 
-  // Download MP3 audio
+  // Download real audio WAV
   const handleDownloadAudio = (rec: AudioRecordingItem) => {
-    const fakeAudioContent = "ID3\x03\x00\x00\x00\x00\x00\x23APEX_VOICE_AUDIO_RECORDING_DATA";
-    const blob = new Blob([fakeAudioContent], { type: "audio/mp3" });
-    const url = URL.createObjectURL(blob);
+    const audioUrl = getRecordingAudioUrl(rec);
     const a = document.createElement("a");
-    a.href = url;
-    a.download = `recording-${rec.id}-${rec.callerName.replace(/\s+/g, "_")}.mp3`;
+    a.href = audioUrl;
+    a.download = `recording-${rec.id}-${rec.callerName.replace(/\s+/g, "_")}.wav`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
-    URL.revokeObjectURL(url);
 
     addToast({
       title: "Audio Downloaded",
-      description: `Downloaded ${rec.callerName}'s MP3 audio recording.`,
+      description: `Downloaded ${rec.callerName}'s audio recording.`,
       type: "success",
     });
   };
@@ -263,27 +331,41 @@ export default function VoiceRecorderPage() {
       if (res.ok) {
         const data = await res.json();
         if (data && Array.isArray(data.calls) && data.calls.length > 0) {
-          const mapped: AudioRecordingItem[] = data.calls.map((c: any, i: number) => ({
-            id: c.id || `rec-${i}`,
-            callerName: c.callerName || "Customer Lead",
-            callerNumber: c.callerNumber || "+1 (555) 000-0000",
-            agentName: c.agentName || (activeAgents[0]?.name || "Rachel (Enterprise SDR)"),
-            startedAt: c.startedAt || new Date().toISOString(),
-            durationSeconds: c.duration || 120,
-            sentiment: "positive",
-            sentimentScore: 88,
-            qualificationStatus: "qualified",
-            qualificationScore: 92,
-            recordingUrl: c.recordingUrl || `https://storage.googleapis.com/apex-recordings/${c.id}.mp3`,
-            fileSizeKb: Math.round((c.duration || 120) * 15),
-            format: "MP3 24kHz HD",
-            source: "ai_voice_agent",
-            transcriptSummary: "Live dual-channel recording synced from voice carrier stream.",
-            transcript: [
-              { speaker: "agent", text: "Hello! Thank you for contacting Apex Voice. How can I assist you today?", timestamp: "0:02" },
-              { speaker: "caller", text: c.transcript || "Inquiry regarding automated voice agent scheduling.", timestamp: "0:08" },
-            ],
-          }));
+          const mapped: AudioRecordingItem[] = data.calls.map((c: any, i: number) => {
+            const parsedTranscript = typeof c.transcript === "string" && c.transcript.trim().length > 0
+              ? c.transcript.split("\n").filter((l: string) => l.trim()).map((line: string, idx: number) => {
+                  const isCaller = line.toLowerCase().startsWith("user:") || line.toLowerCase().startsWith("caller:");
+                  const clean = line.replace(/^(user|caller|assistant|agent):/i, "").trim();
+                  return {
+                    speaker: isCaller ? ("caller" as const) : ("agent" as const),
+                    text: clean || line,
+                    timestamp: `0:${String(idx * 4 + 2).padStart(2, "0")}`,
+                  };
+                })
+              : [
+                  { speaker: "agent" as const, text: "Hello! Thank you for contacting Apex Voice. How can I assist you today?", timestamp: "0:02" },
+                  { speaker: "caller" as const, text: c.transcript || "Inquiry regarding automated voice agent scheduling.", timestamp: "0:08" },
+                ];
+
+            return {
+              id: c.id || `rec-${i}`,
+              callerName: c.callerName || "Customer Lead",
+              callerNumber: c.callerNumber || "+1 (555) 000-0000",
+              agentName: c.agentName || (activeAgents[0]?.name || "Rachel (Enterprise SDR)"),
+              startedAt: c.startedAt || new Date().toISOString(),
+              durationSeconds: c.duration || 120,
+              sentiment: "positive",
+              sentimentScore: 88,
+              qualificationStatus: "qualified",
+              qualificationScore: 92,
+              recordingUrl: c.recordingUrl || c.recording_url || `${getApiBase()}/recordings/${c.id}/audio`,
+              fileSizeKb: Math.round((c.duration || 120) * 15),
+              format: "WAV 16kHz PCM",
+              source: "ai_voice_agent",
+              transcriptSummary: "Live dual-channel recording synced from voice carrier stream.",
+              transcript: parsedTranscript,
+            };
+          });
           setRecordingsList(mapped);
         }
       }
@@ -298,6 +380,11 @@ export default function VoiceRecorderPage() {
       });
     }
   };
+
+  // Auto-fetch real audio recordings on page mount
+  useEffect(() => {
+    handleSyncAgentVoiceStream();
+  }, []);
 
   // Filtered & Sorted List
   const filteredRecordings = useMemo(() => {

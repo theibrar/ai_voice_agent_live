@@ -35,6 +35,11 @@ from loguru import logger
 from livekit import rtc
 from livekit.agents import JobContext, WorkerOptions, cli, AutoSubscribe
 
+try:
+    import audioop
+except ImportError:
+    audioop = None
+
 # ─────────────────────────────────────────────────────────────────────────────
 # CONFIG  (all overridable via env vars in docker-compose.contabo.yml)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -58,6 +63,25 @@ DEFAULT_VOICE  = os.getenv("DEFAULT_VOICE",  "af_bella")
 VAD_ENERGY_THRESHOLD    = 800
 # Frames of silence (~20ms each) before treating as end-of-turn (~600ms)
 END_OF_TURN_SILENCE_FRAMES = 30
+
+# ─────────────────────────────────────────────────────────────────────────────
+# PERSISTENT ERROR & MODEL ISSUE LOGGING FILE
+# ─────────────────────────────────────────────────────────────────────────────
+LOGS_DIR = os.getenv("LOGS_DIR", "/app/logs")
+try:
+    os.makedirs(LOGS_DIR, exist_ok=True)
+    ERROR_LOG_FILE = os.path.join(LOGS_DIR, "model_errors.log")
+    logger.add(
+        ERROR_LOG_FILE,
+        level="ERROR",
+        rotation="20 MB",
+        retention="7 days",
+        format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level: <8} | {name}:{function}:{line} - {message}",
+        backtrace=True,
+        diagnose=True,
+    )
+except Exception as _log_err:
+    pass
 
 # ─────────────────────────────────────────────────────────────────────────────
 # GLOBAL HTTP SESSION  (shared across all concurrent call coroutines)
@@ -226,8 +250,18 @@ class CallSession:
         self.transfer_requested  = False
         self.should_hangup       = False
 
+        # AI Models & Endpoints (Inherited from Super Admin / Backend)
+        self.llm_model   = LLM_MODEL
+        self.llm_url     = LLM_URL
+        self.llm_api_key = GPU_API_KEY
+        self.tts_url     = TTS_URL
+        self.tts_api_key = GPU_API_KEY
+
         # Barge-in control
         self.barge_in = asyncio.Event()
+
+        # Dual-channel audio master recording buffer (16kHz 16-bit mono PCM)
+        self.conversation_pcm: bytearray = bytearray()
 
     async def handshake_backend(self):
         """Notify Go backend that call started, receive agent persona."""
@@ -267,9 +301,22 @@ class CallSession:
 
                     self.voice_speed   = float(d.get("voice_speed", 1.0))
                     self.tenant_id     = d.get("tenant_id", 1)
+
+                    # Dynamic Model & API Key inheritance from Super Admin
+                    if d.get("llm_model"):
+                        self.llm_model = d["llm_model"]
+                    if d.get("llm_url"):
+                        self.llm_url = d["llm_url"]
+                    if d.get("llm_api_key"):
+                        self.llm_api_key = d["llm_api_key"]
+                    if d.get("tts_url"):
+                        self.tts_url = d["tts_url"]
+                    if d.get("tts_api_key"):
+                        self.tts_api_key = d["tts_api_key"]
+
                     logger.success(
                         f"Backend handshake OK | Agent: {self.agent_name} | "
-                        f"Voice: {self.voice_name} | Caller: {self.customer_phone}"
+                        f"LLM: {self.llm_model} | Voice: {self.voice_name} | Caller: {self.customer_phone}"
                     )
         except Exception as e:
             logger.warning(f"Backend handshake fallback (using defaults): {e}")
@@ -289,6 +336,34 @@ class CallSession:
             transcript_text = f"ASSISTANT: {self.greeting}"
 
         sess = await get_session()
+
+        # 1. Save and upload real conversation audio recording
+        recording_url = f"/api/v1/recordings/{self.call_id}/audio"
+        if len(self.conversation_pcm) > 0:
+            try:
+                wav_bytes = pcm16_to_wav(bytes(self.conversation_pcm), sample_rate=16000)
+                recordings_dir = os.getenv("RECORDINGS_DIR", "/app/recordings")
+                try:
+                    os.makedirs(recordings_dir, exist_ok=True)
+                    wav_file_path = os.path.join(recordings_dir, f"{self.call_id}.wav")
+                    with open(wav_file_path, "wb") as f:
+                        f.write(wav_bytes)
+                except Exception:
+                    pass
+
+                # Upload to Go backend recording vault
+                form_data = aiohttp.FormData()
+                form_data.add_field("call_id", self.call_id)
+                form_data.add_field("file", wav_bytes, filename=f"{self.call_id}.wav", content_type="audio/wav")
+                async with sess.post(f"{BACKEND_URL}/calls/recordings/upload", data=form_data) as up_res:
+                    if up_res.status == 200:
+                        logger.success(f"Call recording audio successfully uploaded to vault | {self.call_id}")
+                    else:
+                        up_text = await up_res.text()
+                        logger.warning(f"Audio upload returned status {up_res.status}: {up_text[:100]}")
+            except Exception as rec_err:
+                logger.warning(f"Audio recording save/upload exception: {rec_err}")
+
         payload = {
             "call_id":            self.call_id,
             "tenant_id":          self.tenant_id,
@@ -303,7 +378,7 @@ class CallSession:
             "sentiment":          "positive",
             "score":              95 if self.appointment_booked else 80,
             "appointment_booked": self.appointment_booked,
-            "recording_url":      f"https://storage.apexvoice.ai/recordings/{self.call_id}.mp3",
+            "recording_url":      recording_url,
         }
         try:
             async with sess.post(
@@ -456,24 +531,34 @@ async def transcribe(audio_bytes: bytes) -> str:
                 return text
             else:
                 err_body = await r.text()
-                logger.error(f"STT HTTP {r.status}: {err_body}")
+                logger.error(f"[MODEL ISSUE: STT Parakeet-TDT ({STT_URL})] HTTP {r.status}: {err_body}")
     except Exception as e:
-        logger.error(f"STT error: {e}")
+        logger.error(f"[MODEL ISSUE: STT Parakeet-TDT ({STT_URL})] Connection error: {e}")
     return ""
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# LLM  (vLLM Qwen2.5-7B-AWQ with streaming + tool calling)
+# LLM  (Dynamic Reasoning Engine per Agent Persona & Super Admin Engine)
 # ─────────────────────────────────────────────────────────────────────────────
 async def stream_llm(sess: aiohttp.ClientSession, cs: CallSession) -> AsyncGenerator[str, None]:
+    target_llm_url = (getattr(cs, "llm_url", None) or LLM_URL).rstrip("/")
+    if not target_llm_url.endswith("/chat/completions"):
+        if target_llm_url.endswith("/v1"):
+            target_llm_url += "/chat/completions"
+        else:
+            target_llm_url += "/v1/chat/completions"
+
+    target_api_key = getattr(cs, "llm_api_key", None) or GPU_API_KEY
+    target_model   = getattr(cs, "llm_model", None) or LLM_MODEL
+
     headers = {
-        "Authorization": f"Bearer {GPU_API_KEY}",
+        "Authorization": f"Bearer {target_api_key}",
         "Content-Type":  "application/json",
     }
 
     async def _do_stream(messages: list) -> AsyncGenerator[str, None]:
         payload = {
-            "model":       LLM_MODEL,
+            "model":       target_model,
             "messages":    messages,
             "tools":       TOOLS,
             "tool_choice": "auto",
@@ -489,10 +574,36 @@ async def stream_llm(sess: aiohttp.ClientSession, cs: CallSession) -> AsyncGener
         t0 = time.time()
 
         try:
-            async with sess.post(f"{LLM_URL}/chat/completions", json=payload, headers=headers) as r:
+            async with sess.post(target_llm_url, json=payload, headers=headers) as r:
                 if r.status != 200:
                     body = await r.text()
-                    logger.error(f"LLM {r.status}: {body[:200]}")
+                    logger.error(f"[MODEL ISSUE: LLM {target_model} ({target_llm_url})] HTTP {r.status}: {body[:300]}")
+                    # Automatic self-healing fallback to master GPU LLM
+                    if target_llm_url != f"{LLM_URL}/chat/completions":
+                        logger.warning(f"Falling back to default GPU LLM ({LLM_MODEL})...")
+                        fb_headers = {"Authorization": f"Bearer {GPU_API_KEY}", "Content-Type": "application/json"}
+                        fb_payload = dict(payload, model=LLM_MODEL)
+                        async with sess.post(f"{LLM_URL}/chat/completions", json=fb_payload, headers=fb_headers) as fb_r:
+                            if fb_r.status == 200:
+                                async for raw in fb_r.content:
+                                    if cs.barge_in.is_set():
+                                        break
+                                    line = raw.decode("utf-8", errors="ignore").strip()
+                                    if not line.startswith("data: ") or line[6:] == "[DONE]":
+                                        continue
+                                    try:
+                                        chunk = json.loads(line[6:])
+                                        content = chunk["choices"][0].get("delta", {}).get("content", "")
+                                        if content:
+                                            clause_buf += content
+                                            parts = re.split(r"(?<=[.!?])\s+", clause_buf)
+                                            if len(parts) > 1:
+                                                for p in parts[:-1]:
+                                                    if p.strip() and not cs.barge_in.is_set():
+                                                        yield p.strip()
+                                                clause_buf = parts[-1]
+                                    except Exception:
+                                        continue
                     return
 
                 async for raw in r.content:
@@ -541,7 +652,7 @@ async def stream_llm(sess: aiohttp.ClientSession, cs: CallSession) -> AsyncGener
                         continue
 
         except Exception as e:
-            logger.error(f"LLM stream error: {e}")
+            logger.error(f"[MODEL ISSUE: LLM {LLM_MODEL} ({LLM_URL})] Stream error: {e}")
 
         if clause_buf.strip() and not cs.barge_in.is_set():
             yield clause_buf.strip()
@@ -582,11 +693,15 @@ async def stream_llm(sess: aiohttp.ClientSession, cs: CallSession) -> AsyncGener
         yield clause
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# TTS  (Kokoro-82M on GPU — raw PCM16 24kHz streaming, no WAV header)
+# TTS  (Kokoro-82M on GPU — raw PCM16 24kHz streaming, with dynamic Super Admin routing)
 # ─────────────────────────────────────────────────────────────────────────────
 async def tts_stream_pcm(
-    sess: aiohttp.ClientSession, text: str, voice: str, speed: float
+    sess: aiohttp.ClientSession,
+    text: str,
+    voice: str,
+    speed: float,
+    tts_url: Optional[str] = None,
+    tts_api_key: Optional[str] = None,
 ) -> AsyncGenerator[bytes, None]:
     if not text.strip():
         return
@@ -600,15 +715,18 @@ async def tts_stream_pcm(
     if not clean_voice:
         clean_voice = "af_bella"
 
+    target_tts_url = (tts_url or TTS_URL).rstrip("/")
+    target_key = tts_api_key or GPU_API_KEY
+
     payload = {"text": text, "voice": clean_voice, "speed": speed}
     t0      = time.time()
     logged  = False
     try:
         async with sess.post(
-            f"{TTS_URL}/stream",
+            f"{target_tts_url}/stream",
             json=payload,
             headers={
-                "Authorization": f"Bearer {GPU_API_KEY}",
+                "Authorization": f"Bearer {target_key}",
                 "Content-Type":  "application/json",
             },
         ) as r:
@@ -620,9 +738,35 @@ async def tts_stream_pcm(
                     yield chunk
                 return
             else:
-                logger.warning(f"TTS /stream returned {r.status}, attempting /v1/audio/speech fallback...")
+                body = await r.text()
+                logger.error(f"[MODEL ISSUE: TTS Kokoro-82M ({target_tts_url})] /stream HTTP {r.status}: {body[:200]}")
+                # Fallback to master GPU TTS if custom TTS returned non-200
+                if target_tts_url != TTS_URL:
+                    logger.warning(f"Falling back to default GPU TTS ({TTS_URL})...")
+                    async with sess.post(
+                        f"{TTS_URL}/stream",
+                        json=payload,
+                        headers={"Authorization": f"Bearer {GPU_API_KEY}", "Content-Type": "application/json"},
+                    ) as fb_r:
+                        if fb_r.status == 200:
+                            async for chunk in fb_r.content.iter_chunked(1920):
+                                yield chunk
+                            return
     except Exception as e:
-        logger.error(f"TTS error: {e}")
+        logger.error(f"[MODEL ISSUE: TTS Kokoro-82M ({target_tts_url})] Connection error: {e}")
+        # Connection fallback
+        if target_tts_url != TTS_URL:
+            try:
+                async with sess.post(
+                    f"{TTS_URL}/stream",
+                    json=payload,
+                    headers={"Authorization": f"Bearer {GPU_API_KEY}", "Content-Type": "application/json"},
+                ) as fb_r:
+                    if fb_r.status == 200:
+                        async for chunk in fb_r.content.iter_chunked(1920):
+                            yield chunk
+            except Exception:
+                pass
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -663,6 +807,17 @@ async def play_pcm(
     async for chunk in pcm_gen:
         if cs.barge_in.is_set():
             return
+
+        # Record agent audio into master conversation recording buffer (resample 24kHz -> 16kHz)
+        try:
+            if audioop is not None:
+                resampled, _ = audioop.ratecv(chunk, 2, 1, 24000, 16000, None)
+                cs.conversation_pcm.extend(resampled)
+            else:
+                cs.conversation_pcm.extend(chunk)
+        except Exception:
+            pass
+
         data     = overflow + chunk
         overflow = b""
         while len(data) >= BYTES:
@@ -721,7 +876,7 @@ async def entrypoint(ctx: JobContext):
         if remote_track.kind != rtc.TrackKind.KIND_AUDIO:
             return
         logger.info(f"Subscribed & listening to caller audio track: {remote_track.sid}")
-        stream = rtc.AudioStream(remote_track)
+        stream = rtc.AudioStream(remote_track, sample_rate=16000, num_channels=1)
 
         async def _read_audio():
             speaking = False
@@ -734,11 +889,10 @@ async def entrypoint(ctx: JobContext):
                 if not cs.is_active or cs.should_hangup:
                     break
                 raw = bytes(ev.frame.data)
-                sample_rate = ev.frame.sample_rate or 16000
                 energy = pcm_energy(raw)
 
-                # Telephone voice energy detection (lowered to 250 for telephone/cellular audio)
-                if energy > 250:
+                # Telephone voice energy detection (180 threshold for telephone/cellular audio)
+                if energy > 180:
                     consecutive_speech += 1
                     # Require 2 frames (~40ms) of voice energy to trigger
                     if consecutive_speech >= 2:
@@ -762,6 +916,7 @@ async def entrypoint(ctx: JobContext):
                             # Transcribe if audio is longer than 250ms
                             min_bytes = int(sample_rate * 0.25 * 2)
                             if len(pcm_buf) > min_bytes:
+                                cs.conversation_pcm.extend(pcm_buf)
                                 wav = pcm16_to_wav(bytes(pcm_buf), sample_rate=sample_rate)
                                 try:
                                     audio_queue.put_nowait(wav)
@@ -790,7 +945,7 @@ async def entrypoint(ctx: JobContext):
     greeting_start_time = time.time()
     await play_pcm(
         audio_source,
-        tts_stream_pcm(sess, greeting_txt, cs.voice_name, cs.voice_speed),
+        tts_stream_pcm(sess, greeting_txt, cs.voice_name, cs.voice_speed, cs.tts_url, cs.tts_api_key),
         cs,
     )
     cs.chat_history.append({"role": "assistant", "content": greeting_txt})
@@ -826,7 +981,7 @@ async def entrypoint(ctx: JobContext):
                 full_reply += " " + clause
                 await play_pcm(
                     audio_source,
-                    tts_stream_pcm(sess, clause, cs.voice_name, cs.voice_speed),
+                    tts_stream_pcm(sess, clause, cs.voice_name, cs.voice_speed, cs.tts_url, cs.tts_api_key),
                     cs,
                 )
 

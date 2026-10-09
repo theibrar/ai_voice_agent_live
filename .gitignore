@@ -1,0 +1,51 @@
+# Node / Next.js
+frontend/node_modules/
+frontend/.next/
+frontend/out/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Go binaries
+backend/backend-chatbot
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Recordings & Media storage
+recordings/
+*.wav
+*.mp3
+
+# Logs
+logs/
+*.log
+error_report.txt
+
+# OS metadata
+.DS_Store
+Thumbs.db

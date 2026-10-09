@@ -64,8 +64,8 @@ func main() {
 	formsHandler := handlers.NewFormsHandler(dbPool)
 	contactsHandler := handlers.NewContactsHandler(dbPool)
 	phoneNumbersHandler := handlers.NewPhoneNumbersHandler(dbPool)
-	ttsHandler := handlers.NewTTSHandler()
-	simulatorHandler := handlers.NewSimulatorHandler()
+	ttsHandler := handlers.NewTTSHandler(dbPool)
+	simulatorHandler := handlers.NewSimulatorHandler(dbPool)
 
 	r := gin.Default()
 
@@ -95,6 +95,8 @@ func main() {
 	r.POST("/api/simulator/chat", simulatorHandler.SimulateChat)
 	r.POST("/simulator-api/chat", simulatorHandler.SimulateChat)
 	r.POST("/api/webhooks/telnyx", webhooksHandler.IngestTelnyxWebhook)
+	r.GET("/recordings/:id/audio", callsHandler.StreamRecordingAudio)
+	r.GET("/recordings/:id", callsHandler.StreamRecordingAudio)
 
 	api := r.Group("/api/v1")
 	{
@@ -114,9 +116,12 @@ func main() {
 		api.POST("/forms/:id/submit", formsHandler.SubmitFormWebhook)
 		api.POST("/webhooks/forms/:id", formsHandler.SubmitFormWebhook)
 
-		// Telephony & Neural Speech Synthesis
+		// Telephony & Neural Speech Synthesis & Audio Vault Recordings
 		api.POST("/calls/start", callsHandler.StartCall)
 		api.POST("/calls/end", callsHandler.EndCall)
+		api.POST("/calls/recordings/upload", callsHandler.UploadRecording)
+		api.GET("/recordings/:id/audio", callsHandler.StreamRecordingAudio)
+		api.GET("/recordings/:id", callsHandler.StreamRecordingAudio)
 		api.POST("/tts/synthesize", ttsHandler.SynthesizeSpeech)
 		api.POST("/rag/search", ragHandler.Search)
 		api.POST("/rag/query", ragHandler.Search)
@@ -255,8 +260,9 @@ func main() {
 			tenantGroup.GET("/announcements", superAdminHandler.GetTenantAnnouncements)
 		}
 
-		// Public/read-only access to active database AI engines
+		// Public/read-only access to active database AI engines and LLM models
 		api.GET("/ai-engines", superAdminHandler.GetAIEngines)
+		api.GET("/models", superAdminHandler.GetActiveLLMModels)
 
 		// ==========================================
 		// 4. Super Admin Global Management (RBAC: super_admin only)

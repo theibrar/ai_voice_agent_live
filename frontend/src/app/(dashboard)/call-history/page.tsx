@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
+import { getApiBase } from "@/lib/auth-context";
 import { PageHeader } from "@/components/page-header";
 import { StatusPill } from "@/components/status-pill";
 import { Call } from "@/lib/types";
@@ -37,7 +38,57 @@ export default function CallHistoryPage() {
   // Audio Player State
   const [isPlaying, setIsPlaying] = useState(false);
   const [playbackSpeed, setPlaybackSpeed] = useState(1.0);
-  const [currentTimeSec, setCurrentTimeSec] = useState(32);
+  const [currentTimeSec, setCurrentTimeSec] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
+  // Real Audio Controller
+  useEffect(() => {
+    if (!selectedCallForAudio) {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+      setIsPlaying(false);
+      setCurrentTimeSec(0);
+      return;
+    }
+
+    let url = selectedCallForAudio.recordingUrl || `${getApiBase()}/recordings/${selectedCallForAudio.id}/audio`;
+    if (url.includes("storage.apexvoice.ai") || url.includes("storage.googleapis.com")) {
+      url = `${getApiBase()}/recordings/${selectedCallForAudio.id}/audio`;
+    } else if (url.startsWith("/api/v1") || url.startsWith("/recordings")) {
+      const base = getApiBase().replace(/\/api\/v1\/?$/, "");
+      url = `${base}${url.startsWith("/") ? "" : "/"}${url}`;
+    }
+
+    const audio = new Audio(url);
+    audio.playbackRate = playbackSpeed;
+    audio.ontimeupdate = () => {
+      if (audio.currentTime) {
+        setCurrentTimeSec(Math.floor(audio.currentTime));
+      }
+    };
+    audio.onended = () => {
+      setIsPlaying(false);
+      setCurrentTimeSec(0);
+    };
+    audio.onerror = () => {
+      setIsPlaying(false);
+    };
+
+    audio.play().then(() => setIsPlaying(true)).catch(() => setIsPlaying(false));
+    audioRef.current = audio;
+
+    return () => {
+      audio.pause();
+    };
+  }, [selectedCallForAudio]);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.playbackRate = playbackSpeed;
+    }
+  }, [playbackSpeed]);
 
   const filteredCalls = (calls || []).filter((call) => {
     const callerName = call?.callerName || call?.contactName || "";
@@ -245,17 +296,38 @@ export default function CallHistoryPage() {
               </div>
 
               <button
-                onClick={() => setIsPlaying(!isPlaying)}
-                className="w-10 h-10 rounded-full bg-[#3157D5] text-white flex items-center justify-center hover:bg-[#2646B8] shadow-md shadow-[#3157D5]/20"
+                onClick={() => {
+                  if (audioRef.current) {
+                    if (isPlaying) {
+                      audioRef.current.pause();
+                      setIsPlaying(false);
+                    } else {
+                      audioRef.current.play().then(() => setIsPlaying(true)).catch(() => {});
+                    }
+                  }
+                }}
+                className="w-10 h-10 rounded-full bg-[#3157D5] text-white flex items-center justify-center hover:bg-[#2646B8] shadow-md shadow-[#3157D5]/20 cursor-pointer"
               >
                 {isPlaying ? <Pause className="w-5 h-5" /> : <Play className="w-5 h-5 ml-0.5" />}
               </button>
 
               <button
                 onClick={() => {
-                  addToast({ title: "Downloading WAV", description: "Audio master track saved.", type: "success" });
+                  if (selectedCallForAudio) {
+                    let url = selectedCallForAudio.recordingUrl || `${getApiBase()}/recordings/${selectedCallForAudio.id}/audio`;
+                    if (url.includes("storage.apexvoice.ai") || url.includes("storage.googleapis.com")) {
+                      url = `${getApiBase()}/recordings/${selectedCallForAudio.id}/audio`;
+                    }
+                    const a = document.createElement("a");
+                    a.href = url;
+                    a.download = `recording-${selectedCallForAudio.id}.wav`;
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                    addToast({ title: "Downloading WAV", description: "Audio recording downloaded.", type: "success" });
+                  }
                 }}
-                className="text-xs font-semibold text-[#3157D5] hover:underline"
+                className="text-xs font-semibold text-[#3157D5] hover:underline cursor-pointer"
               >
                 Download WAV
               </button>

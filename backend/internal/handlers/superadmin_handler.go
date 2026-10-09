@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -104,6 +105,48 @@ func (h *SuperAdminHandler) ensureSchemaAndSeed() {
 			synced_at TIMESTAMPTZ DEFAULT NOW()
 		);
 		DELETE FROM ai_engines WHERE id NOT IN ('eng-vllm-qwen', 'eng-kokoro-tts', 'eng-parakeet-stt', 'eng-vad-silero', 'eng-prosody-testbench') OR id = 'eng-whisper-stt';
+	`)
+
+	gpuHost := os.Getenv("GPU_HOST")
+	if gpuHost == "" {
+		gpuHost = "77.104.167.149"
+	}
+	gpuAPIKey := os.Getenv("GPU_API_KEY")
+	if gpuAPIKey == "" {
+		gpuAPIKey = "IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF"
+	}
+	llmURL := os.Getenv("LLM_URL")
+	if llmURL == "" {
+		llmURL = os.Getenv("VLLM_BASE_URL")
+	}
+	if llmURL == "" {
+		llmURL = fmt.Sprintf("http://%s:59982/v1", gpuHost)
+	}
+	llmModel := os.Getenv("LLM_MODEL")
+	if llmModel == "" {
+		llmModel = "Qwen/Qwen2.5-7B-Instruct-AWQ"
+	}
+	ttsURL := os.Getenv("TTS_URL")
+	if ttsURL == "" {
+		ttsURL = os.Getenv("TTS_BASE_URL")
+	}
+	if ttsURL == "" {
+		ttsURL = fmt.Sprintf("http://%s:59643", gpuHost)
+	}
+	sttURL := os.Getenv("STT_URL")
+	if sttURL == "" {
+		sttURL = fmt.Sprintf("http://%s:59805", gpuHost)
+	}
+	vadURL := os.Getenv("VAD_URL")
+	if vadURL == "" {
+		vadURL = fmt.Sprintf("http://%s:59929", gpuHost)
+	}
+	prosodyURL := os.Getenv("PROSODY_URL")
+	if prosodyURL == "" {
+		prosodyURL = fmt.Sprintf("http://%s:59835", gpuHost)
+	}
+
+	seedEnginesQuery := fmt.Sprintf(`
 		INSERT INTO ai_engines (
 			id, engine_name, provider, engine_type, model_identifier, endpoint_url,
 			api_key, tier_requirement, latency_avg_ms, cost_per_unit, is_custom,
@@ -111,37 +154,37 @@ func (h *SuperAdminHandler) ensureSchemaAndSeed() {
 		) VALUES 
 		(
 			'eng-vllm-qwen', 'vLLM Neural LLM Engine', 'vLLM OpenAI-Compatible', 'llm',
-			'Qwen/Qwen2.5-7B-Instruct-AWQ', 'http://77.104.167.149:59982/v1', 'IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF',
+			'%s', '%s', '%s',
 			'all', 95, '$0.10 / 1M tokens', true, true,
-			'Self-hosted master GPU cluster running vLLM OpenAI-compatible REST server (Port 59982) with Qwen 2.5 7B Instruct AWQ.',
+			'Self-hosted master GPU cluster running vLLM OpenAI-compatible REST server with %s.',
 			'active', NOW()
 		),
 		(
 			'eng-kokoro-tts', 'Kokoro Ultra-Fast Neural TTS', 'Kokoro-82M ONNX', 'tts',
-			'kokoro-82m', 'http://77.104.167.149:59643', 'IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF',
+			'kokoro-82m', '%s', '%s',
 			'all', 45, '$0.005 / 1K chars', true, true,
-			'Ultra-low ~45ms latency ONNX TTS engine (Port 59643) with 82M parameters. 24 kHz, 16-bit Mono PCM WAV.',
+			'Ultra-low ~45ms latency ONNX TTS engine with 82M parameters. 24 kHz, 16-bit Mono PCM WAV.',
 			'active', NOW()
 		),
 		(
 			'eng-parakeet-stt', 'Parakeet-TDT Neural Streaming Transcriber', 'Parakeet-TDT CUDA', 'stt',
-			'parakeet-tdt-0.6b-en', 'http://77.104.167.149:59805', 'IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF',
+			'parakeet-tdt-0.6b-en', '%s', '%s',
 			'all', 110, '$0.003 / min', true, true,
-			'Real-time Parakeet-TDT neural streaming STT on NVIDIA CUDA (Port 59805) with sub-120ms latency and high-accuracy transcription.',
+			'Real-time Parakeet-TDT neural streaming STT on NVIDIA CUDA with sub-120ms latency and high-accuracy transcription.',
 			'active', NOW()
 		),
 		(
 			'eng-vad-silero', 'Silero VAD v5 Neural Chunk Monitor', 'Silero VAD GPU Microservice', 'stt',
-			'silero-vad-v5', 'http://77.104.167.149:59929', 'IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF',
+			'silero-vad-v5', '%s', '%s',
 			'all', 5, '$0.00 / Self-Hosted GPU', true, false,
-			'Sub-5ms caller interruption / barge-in neural chunk monitor (Port 59929) with 16 kHz sample rate, 512 samples per frame.',
+			'Sub-5ms caller interruption / barge-in neural chunk monitor with 16 kHz sample rate, 512 samples per frame.',
 			'active', NOW()
 		),
 		(
 			'eng-prosody-testbench', 'Gradio Human Prosody Testbench', 'Gradio Testbench', 'tts',
-			'human-prosody-testbench', 'http://77.104.167.149:59835', 'IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF',
+			'human-prosody-testbench', '%s', '%s',
 			'all', 50, '$0.00 / Self-Hosted GPU', true, false,
-			'Interactive Browser UI (Port 59835) for human prosody and voice testing.',
+			'Interactive Browser UI for human prosody and voice testing.',
 			'active', NOW()
 		)
 		ON CONFLICT (id) DO UPDATE SET
@@ -152,7 +195,8 @@ func (h *SuperAdminHandler) ensureSchemaAndSeed() {
 			endpoint_url = EXCLUDED.endpoint_url,
 			api_key = EXCLUDED.api_key,
 			status = 'active';
-	`)
+	`, llmModel, llmURL, gpuAPIKey, llmModel, ttsURL, gpuAPIKey, sttURL, gpuAPIKey, vadURL, gpuAPIKey, prosodyURL, gpuAPIKey)
+	_, _ = h.db.Exec(ctx, seedEnginesQuery)
 
 
 	// Ensure sip_trunks table exists
@@ -1548,7 +1592,7 @@ func (h *SuperAdminHandler) GetActiveLLMModels(c *gin.Context) {
 		if err := rows.Scan(&id, &engineName, &provider, &modelIdentifier, &desc); err == nil {
 			fullName := modelIdentifier
 			if fullName == "" {
-				fullName = fmt.Sprintf("%s (%s)", engineName, provider)
+				fullName = engineName
 			}
 			models = append(models, AdminModelOption{
 				ID:       id,
@@ -1557,7 +1601,19 @@ func (h *SuperAdminHandler) GetActiveLLMModels(c *gin.Context) {
 				FullName: fullName,
 			})
 		}
+	}
 
+	if len(models) == 0 {
+		defaultModel := os.Getenv("LLM_MODEL")
+		if defaultModel == "" {
+			defaultModel = "Qwen/Qwen2.5-7B-Instruct-AWQ"
+		}
+		models = append(models, AdminModelOption{
+			ID:       "eng-vllm-qwen",
+			Name:     "vLLM Neural LLM Engine",
+			Provider: "vLLM OpenAI-Compatible",
+			FullName: defaultModel,
+		})
 	}
 
 	c.JSON(http.StatusOK, gin.H{"models": models})
@@ -1671,6 +1727,15 @@ func (h *SuperAdminHandler) CreateAIEngine(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to store custom model in database: " + err.Error()})
 		return
+	}
+
+	// Propagate new LLM to all tenants' allowed models list in database
+	if engType == "llm" && req.ModelIdentifier != "" {
+		_, _ = h.db.Exec(ctx, `
+			UPDATE tenants 
+			SET allowed_llms = allowed_llms || jsonb_build_array($1::text)
+			WHERE allowed_llms IS NOT NULL AND NOT allowed_llms @> jsonb_build_array($1::text)
+		`, req.ModelIdentifier)
 	}
 
 	c.JSON(http.StatusOK, gin.H{

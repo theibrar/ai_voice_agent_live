@@ -50,25 +50,32 @@ services:
     container_name: livekit-agent-worker
     restart: unless-stopped
     network_mode: host
+    env_file:
+      - path: ../.env
+        required: false
+      - path: .env
+        required: false
     environment:
       # ── LiveKit credentials (must match livekit.yaml keys section)
-      - LIVEKIT_URL=ws://127.0.0.1:7880
-      - LIVEKIT_API_KEY=apexvoice-livekit-prod
-      - LIVEKIT_API_SECRET=0293b25a21cb1c6e6f0ec2289befcc9a707f52b082f50a27225ca2970fce5f2c
-      # ── GPU AI Microservices (77.104.167.149)
-      - GPU_HOST=77.104.167.149
-      - GPU_API_KEY=IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF
-      - STT_URL=http://77.104.167.149:59805
-      - LLM_URL=http://77.104.167.149:59982/v1
-      - TTS_URL=http://77.104.167.149:59643
-      - VAD_URL=http://77.104.167.149:59929
-      - LLM_MODEL=Qwen/Qwen2.5-7B-Instruct-AWQ
-      - DEFAULT_VOICE=af_bella
-      # ── Go Backend CRM (running on same Contabo VPS via Oracle docker-compose.yml)
-      - BACKEND_API_URL=http://127.0.0.1:8080/api/v1
+      - LIVEKIT_URL=${LIVEKIT_URL:-ws://127.0.0.1:7880}
+      - LIVEKIT_API_KEY=${LIVEKIT_API_KEY:-apexvoice-livekit-prod}
+      - LIVEKIT_API_SECRET=${LIVEKIT_API_SECRET:-0293b25a21cb1c6e6f0ec2289befcc9a707f52b082f50a27225ca2970fce5f2c}
+      # ── GPU AI Microservices
+      - GPU_HOST=${GPU_HOST:-77.104.167.149}
+      - GPU_API_KEY=${GPU_API_KEY:-IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF}
+      - STT_URL=${STT_URL:-http://77.104.167.149:59805}
+      - LLM_URL=${LLM_URL:-http://77.104.167.149:59982/v1}
+      - TTS_URL=${TTS_URL:-http://77.104.167.149:59643}
+      - VAD_URL=${VAD_URL:-http://77.104.167.149:59929}
+      - LLM_MODEL=${LLM_MODEL:-Qwen/Qwen2.5-7B-Instruct-AWQ}
+      - DEFAULT_VOICE=${DEFAULT_VOICE:-af_bella}
+      # ── Go Backend CRM
+      - BACKEND_API_URL=${BACKEND_API_URL:-http://127.0.0.1:8080/api/v1}
     volumes:
       - ./agent_worker.py:/app/agent_worker.py:ro
       - ./setup_sip_trunk.py:/app/setup_sip_trunk.py:ro
+      - ./logs:/app/logs
+      - ./recordings:/app/recordings
     depends_on:
       - livekit
 

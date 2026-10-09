@@ -900,8 +900,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             durationSeconds: c.duration || 60,
             qualificationScore: c.qualificationScore || c.score || 85,
             startedAt: c.startedAt || new Date().toISOString(),
-            endedAt: c.endedAt,
-            recordingUrl: c.recordingUrl || c.recording_url || "https://storage.apexvoice.ai/recordings/call-sample.mp3",
+            recordingUrl: c.recordingUrl && !c.recordingUrl.includes("storage.apexvoice.ai") && !c.recordingUrl.includes("storage.googleapis.com")
+              ? c.recordingUrl
+              : (c.recording_url && !c.recording_url.includes("storage.apexvoice.ai") && !c.recording_url.includes("storage.googleapis.com")
+                  ? c.recording_url
+                  : `/api/v1/recordings/${c.id || "sample"}/audio`),
             tags: c.tags || ["Inbound Direct", "Verified Lead"],
             transcript: typeof c.transcript === "string" && c.transcript.startsWith("[")
               ? JSON.parse(c.transcript).map((t: any, idx: number) => ({

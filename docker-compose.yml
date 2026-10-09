@@ -38,19 +38,34 @@ services:
     restart: on-failure
     ports:
       - "8080:8080"
+    env_file:
+      - path: .env
+        required: false
     environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USER=postgres
-      - DB_PASSWORD=postgrespassword
-      - DB_NAME=chatbot_db
-      - REDIS_HOST=redis
-      - REDIS_PORT=6379
-      - REDIS_PASSWORD=
-      - JWT_SECRET=apex_voice_master_jwt_secret_2026_key_9982
-      - OPENAI_API_KEY=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
-      - GEMINI_API_KEY=AQ.Ab8RN6JyfBrZTS8O8PnGvOTH59Aqm0F3V98uUcs9RDzbbCmlFQ
-      - DEEPSEEK_API_KEY=sk-6afcb9c9ea194924b7037362f7aaa30f
+      - DB_HOST=${DB_HOST:-postgres}
+      - DB_PORT=${DB_PORT:-5432}
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgrespassword}
+      - DB_NAME=${DB_NAME:-chatbot_db}
+      - REDIS_HOST=${REDIS_HOST:-redis}
+      - REDIS_PORT=${REDIS_PORT:-6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - JWT_SECRET=${JWT_SECRET:-apex_voice_master_jwt_secret_2026_key_9982}
+      - GPU_HOST=${GPU_HOST:-77.104.167.149}
+      - GPU_API_KEY=${GPU_API_KEY:-IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF}
+      - LLM_URL=${LLM_URL:-http://77.104.167.149:59982/v1}
+      - LLM_MODEL=${LLM_MODEL:-Qwen/Qwen2.5-7B-Instruct-AWQ}
+      - STT_URL=${STT_URL:-http://77.104.167.149:59805}
+      - TTS_URL=${TTS_URL:-http://77.104.167.149:59643}
+      - VAD_URL=${VAD_URL:-http://77.104.167.149:59929}
+      - PROSODY_URL=${PROSODY_URL:-http://77.104.167.149:59835}
+      - VLLM_BASE_URL=${LLM_URL:-http://77.104.167.149:59982/v1}
+      - TTS_BASE_URL=${TTS_URL:-http://77.104.167.149:59643}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-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}
+      - GEMINI_API_KEY=${GEMINI_API_KEY:-AQ.Ab8RN6JyfBrZTS8O8PnGvOTH59Aqm0F3V98uUcs9RDzbbCmlFQ}
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-sk-6afcb9c9ea194924b7037362f7aaa30f}
+    volumes:
+      - ./recordings:/app/recordings
     depends_on:
       - postgres
       - redis
@@ -61,13 +76,19 @@ services:
     restart: always
     ports:
       - "3000:3000"
+    env_file:
+      - path: .env
+        required: false
     environment:
       - NEXT_PUBLIC_API_URL=/api/v1
       - INTERNAL_BACKEND_URL=http://backend:8080
       - BACKEND_URL=http://backend:8080
-      - NEXT_PUBLIC_OPENAI_API_KEY=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
-      - NEXT_PUBLIC_GEMINI_API_KEY=AQ.Ab8RN6JyfBrZTS8O8PnGvOTH59Aqm0F3V98uUcs9RDzbbCmlFQ
-      - NEXT_PUBLIC_DEEPSEEK_API_KEY=sk-6afcb9c9ea194924b7037362f7aaa30f
+      - VLLM_BASE_URL=${LLM_URL:-http://77.104.167.149:59982/v1}
+      - TTS_BASE_URL=${TTS_URL:-http://77.104.167.149:59643}
+      - GPU_API_KEY=${GPU_API_KEY:-IbraSoft-GPUZvrMmfSn3ePVE9spRQ2hi751fGSXq5sFpovfUl7XOggbMRRHee8zRk4SWV7YBSUF}
+      - NEXT_PUBLIC_OPENAI_API_KEY=${OPENAI_API_KEY:-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}
+      - NEXT_PUBLIC_GEMINI_API_KEY=${GEMINI_API_KEY:-AQ.Ab8RN6JyfBrZTS8O8PnGvOTH59Aqm0F3V98uUcs9RDzbbCmlFQ}
+      - NEXT_PUBLIC_DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-sk-6afcb9c9ea194924b7037362f7aaa30f}
     depends_on:
       - backend
 
