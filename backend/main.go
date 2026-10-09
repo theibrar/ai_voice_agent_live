@@ -247,8 +247,6 @@ func main() {
 			tenantGroup.POST("/integrations/google-drive/sync", integrationsHandler.SyncGoogleDrive)
 			tenantGroup.POST("/integrations/email/send", integrationsHandler.SendFlowEmail)
 
-			// Active LLM Models for Builder
-			tenantGroup.GET("/models", superAdminHandler.GetActiveLLMModels)
 
 			// Tenant Isolated Billing & Voice Credits
 			tenantGroup.GET("/billing/details", superAdminHandler.GetTenantBillingDetails)
