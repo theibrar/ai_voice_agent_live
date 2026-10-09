@@ -161,10 +161,6 @@ func main() {
 
 			// Live Calls & Recordings
 			tenantGroup.GET("/calls", callsHandler.GetTenantCalls)
-			tenantGroup.DELETE("/calls/:id", callsHandler.DeleteCall)
-			tenantGroup.DELETE("/recordings/:id", callsHandler.DeleteCall)
-			tenantGroup.POST("/recordings/clear-dummy", callsHandler.ClearFakeRecordings)
-			tenantGroup.DELETE("/recordings/fake", callsHandler.ClearFakeRecordings)
 
 			// Unified CRM Contacts & Leads
 			tenantGroup.GET("/contacts", contactsHandler.GetContacts)
