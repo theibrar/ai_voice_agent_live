@@ -396,6 +396,8 @@ export default function CallHistoryPage() {
             </div>
           </div>
         </div>
+      )}
+
       {/* Delete Call Record Modal */}
       {deleteModalCall && (
         <ConfirmDeleteModal

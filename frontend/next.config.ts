@@ -14,9 +14,6 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   async rewrites() {
     const backendHost =
       process.env.INTERNAL_BACKEND_URL ||
