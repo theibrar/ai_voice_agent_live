@@ -149,6 +149,8 @@ interface AppContextType {
   activeCallCount: number;
   endCall: (callId: string) => void;
   holdCall: (callId: string) => void;
+  deleteCall: (callId: string) => Promise<boolean>;
+  clearAllCalls: () => Promise<boolean>;
   transferCall: (callId: string, destination: string) => void;
   addLiveTranscriptMessage: (callId: string, message: Omit<TranscriptMessage, "id">) => void;
   injectSupervisorWhisper: (callId: string, whisperText: string) => void;
@@ -933,6 +935,68 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
+  const deleteCall = useCallback(async (callId: string) => {
+    // Optimistically remove from state
+    setCalls((prev) => prev.filter((c) => c.id !== callId));
+
+    try {
+      const apiUrl = `${getApiBase()}/calls/${encodeURIComponent(callId)}`;
+      const res = await apiFetch(apiUrl, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        addToast({
+          title: "Call Record Deleted",
+          description: `Call #${callId} removed from database.`,
+          type: "success",
+        });
+        await refreshCalls();
+        return true;
+      } else {
+        const err = await res.json().catch(() => ({}));
+        addToast({
+          title: "Delete Failed",
+          description: err.error || "Could not delete call from database.",
+          type: "error",
+        });
+        await refreshCalls();
+        return false;
+      }
+    } catch (err: any) {
+      console.warn("Failed to delete call:", err);
+      addToast({
+        title: "Delete Error",
+        description: err?.message || "Network error while deleting call.",
+        type: "error",
+      });
+      await refreshCalls();
+      return false;
+    }
+  }, [addToast, refreshCalls]);
+
+  const clearAllCalls = useCallback(async () => {
+    setCalls([]);
+    try {
+      const apiUrl = `${getApiBase()}/calls/clear-all`;
+      const res = await apiFetch(apiUrl, {
+        method: "DELETE",
+      });
+      if (res.ok) {
+        addToast({
+          title: "All Calls Cleared",
+          description: "All call records deleted from database.",
+          type: "success",
+        });
+        await refreshCalls();
+        return true;
+      }
+    } catch (err) {
+      console.warn("Failed to clear calls:", err);
+    }
+    await refreshCalls();
+    return false;
+  }, [addToast, refreshCalls]);
+
   const refreshContacts = useCallback(async () => {
     try {
       const apiUrl = getApiBase() + '/contacts';
@@ -1683,6 +1747,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         activeCallCount,
         endCall,
         holdCall,
+        deleteCall,
+        clearAllCalls,
         transferCall,
         addLiveTranscriptMessage,
         injectSupervisorWhisper,

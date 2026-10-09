@@ -24,15 +24,18 @@ import {
   Bot,
   User,
   Zap,
+  Trash2,
 } from "lucide-react";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 
 export default function CallHistoryPage() {
-  const { calls, addToast } = useAppStore();
+  const { calls, deleteCall, addToast } = useAppStore();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [directionFilter, setDirectionFilter] = useState<string>("all");
   const [sentimentFilter, setSentimentFilter] = useState<string>("all");
   const [selectedCallForAudio, setSelectedCallForAudio] = useState<Call | null>(null);
+  const [deleteModalCall, setDeleteModalCall] = useState<Call | null>(null);
   const [selectedCallForTranscript, setSelectedCallForTranscript] = useState<Call | null>(null);
 
   // Audio Player State
@@ -231,6 +234,13 @@ export default function CallHistoryPage() {
                     >
                       <FileText className="w-3 h-3" /> Transcript
                     </button>
+                    <button
+                      onClick={() => setDeleteModalCall(call)}
+                      className="inline-flex items-center gap-1 px-2.5 py-1 bg-white border border-[#E5EAF2] hover:border-rose-200 hover:bg-rose-50 text-[#78849A] hover:text-rose-600 font-semibold rounded-lg transition-colors cursor-pointer"
+                      title="Delete Call Record"
+                    >
+                      <Trash2 className="w-3 h-3 text-rose-500" /> Delete
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -386,6 +396,20 @@ export default function CallHistoryPage() {
             </div>
           </div>
         </div>
+      {/* Delete Call Record Modal */}
+      {deleteModalCall && (
+        <ConfirmDeleteModal
+          isOpen={Boolean(deleteModalCall)}
+          onClose={() => setDeleteModalCall(null)}
+          onConfirm={async () => {
+            if (deleteModalCall) {
+              await deleteCall(deleteModalCall.id);
+            }
+          }}
+          itemType="Call Record"
+          itemName={`Call with ${deleteModalCall.callerName || "Caller"} (${deleteModalCall.id})`}
+          description={`Are you sure you want to delete call #${deleteModalCall.id}? This will permanently remove the record and audio from the PostgreSQL database.`}
+        />
       )}
     </div>
   );

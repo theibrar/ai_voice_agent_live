@@ -550,13 +550,38 @@ func (h *CallsHandler) GetTenantCalls(c *gin.Context) {
 
 // DELETE /api/v1/calls/:id and DELETE /api/v1/recordings/:id
 func (h *CallsHandler) DeleteCall(c *gin.Context) {
-	id := c.Param("id")
+	id := strings.TrimSpace(c.Param("id"))
+	if id == "" {
+		id = strings.TrimSpace(c.Query("id"))
+	}
 	if id == "" {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Missing call id parameter"})
 		return
 	}
 	ctx := c.Request.Context()
-	_, _ = h.dbPool.Exec(ctx, `DELETE FROM call_records WHERE call_id = $1 OR id::text = $1`, id)
+
+	if id == "clear-all" || id == "all" {
+		tag, err := h.dbPool.Exec(ctx, `DELETE FROM call_records`)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error: " + err.Error()})
+			return
+		}
+		if h.wsHub != nil {
+			h.wsHub.BroadcastEvent("calls_cleared", gin.H{})
+		}
+		c.JSON(http.StatusOK, gin.H{
+			"status":  "success",
+			"message": fmt.Sprintf("All %d call records deleted from database", tag.RowsAffected()),
+			"deleted": tag.RowsAffected(),
+		})
+		return
+	}
+
+	tag, err := h.dbPool.Exec(ctx, `DELETE FROM call_records WHERE call_id = $1 OR id::text = $1`, id)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "Database error: " + err.Error()})
+		return
+	}
 
 	// Clean physical audio if saved
 	recordingsDir := getRecordingsDir()
@@ -564,7 +589,15 @@ func (h *CallsHandler) DeleteCall(c *gin.Context) {
 	_ = os.Remove(filepath.Join(recordingsDir, cleanID+".wav"))
 	_ = os.Remove(filepath.Join(recordingsDir, cleanID+".mp3"))
 
-	c.JSON(http.StatusOK, gin.H{"status": "success", "message": "Call recording deleted successfully"})
+	if h.wsHub != nil {
+		h.wsHub.BroadcastEvent("call_deleted", gin.H{"call_id": id})
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"status":  "success",
+		"message": "Call record deleted successfully",
+		"deleted": tag.RowsAffected(),
+	})
 }
 
 // POST /api/v1/recordings/clear-dummy

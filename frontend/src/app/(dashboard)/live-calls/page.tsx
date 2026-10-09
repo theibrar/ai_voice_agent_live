@@ -27,10 +27,22 @@ import {
   Calendar,
   Mail,
   CheckCircle2,
+  Trash2,
 } from "lucide-react";
+import { ConfirmDeleteModal } from "@/components/confirm-delete-modal";
 
 export default function LiveCallsPage() {
-  const { calls, agents, campaigns, endCall, holdCall, activeCallCount, refreshCalls } = useAppStore();
+  const {
+    calls,
+    agents,
+    campaigns,
+    endCall,
+    holdCall,
+    deleteCall,
+    clearAllCalls,
+    activeCallCount,
+    refreshCalls,
+  } = useAppStore();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -38,6 +50,8 @@ export default function LiveCallsPage() {
   const [campaignFilter, setCampaignFilter] = useState<string>("all");
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [testModalOpen, setTestModalOpen] = useState(false);
+  const [deleteModalCall, setDeleteModalCall] = useState<any | null>(null);
+  const [clearAllConfirmOpen, setClearAllConfirmOpen] = useState(false);
 
   // Auto-refresh from database on mount and periodically every 4s
   useEffect(() => {
@@ -89,6 +103,16 @@ export default function LiveCallsPage() {
         }
         actions={
           <div className="flex items-center gap-2">
+            {calls && calls.length > 0 && (
+              <button
+                onClick={() => setClearAllConfirmOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-rose-50 border border-[#E5EAF2] hover:border-rose-200 text-rose-600 text-xs font-bold rounded-xl transition-all shadow-2xs cursor-pointer"
+                title="Clear all calls from database"
+              >
+                <Trash2 className="w-3.5 h-3.5 text-rose-600" />
+                <span>Clear All</span>
+              </button>
+            )}
             <button
               onClick={handleManualRefresh}
               disabled={isRefreshing}
@@ -320,13 +344,13 @@ export default function LiveCallsPage() {
                     <div className="flex items-center gap-1.5">
                       <button
                         onClick={() => holdCall(call.id)}
-                        className="px-2.5 py-1 text-xs font-semibold bg-[#FEF7EC] text-[#D99025] hover:bg-[#FDEBD0] rounded-lg transition-colors"
+                        className="px-2.5 py-1 text-xs font-semibold bg-[#FEF7EC] text-[#D99025] hover:bg-[#FDEBD0] rounded-lg transition-colors cursor-pointer"
                       >
                         Hold
                       </button>
                       <button
                         onClick={() => endCall(call.id)}
-                        className="px-2.5 py-1 text-xs font-semibold bg-[#FDF2F3] text-[#D95C68] hover:bg-[#FCE8EA] rounded-lg transition-colors"
+                        className="px-2.5 py-1 text-xs font-semibold bg-[#FDF2F3] text-[#D95C68] hover:bg-[#FCE8EA] rounded-lg transition-colors cursor-pointer"
                       >
                         End
                       </button>
@@ -335,19 +359,60 @@ export default function LiveCallsPage() {
                     <span className="text-[11px] text-[#78849A]">Call concluded</span>
                   )}
 
-                  <Link
-                    href={`/live-calls/${call.id}`}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-[#3157D5] hover:underline"
-                  >
-                    <span>Inspect Call</span>
-                    <ArrowRight className="w-3.5 h-3.5" />
-                  </Link>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setDeleteModalCall(call)}
+                      className="px-2.5 py-1 text-xs font-semibold bg-white hover:bg-rose-50 border border-[#E5EAF2] hover:border-rose-200 text-[#78849A] hover:text-rose-600 rounded-lg transition-all flex items-center gap-1 cursor-pointer"
+                      title="Delete call from database"
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-rose-500" />
+                      <span>Delete</span>
+                    </button>
+
+                    <Link
+                      href={`/live-calls/${call.id}`}
+                      className="inline-flex items-center gap-1 text-xs font-bold text-[#3157D5] hover:underline"
+                    >
+                      <span>Inspect Call</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
                 </div>
               </div>
             );
           })
         )}
       </div>
+
+      {/* Delete Single Call Confirmation Modal */}
+      {deleteModalCall && (
+        <ConfirmDeleteModal
+          isOpen={Boolean(deleteModalCall)}
+          onClose={() => setDeleteModalCall(null)}
+          onConfirm={async () => {
+            if (deleteModalCall) {
+              await deleteCall(deleteModalCall.id);
+            }
+          }}
+          itemType="Call Record"
+          itemName={`Call with ${deleteModalCall.callerName || deleteModalCall.contactName || "Direct Caller"} (${deleteModalCall.id})`}
+          description={`Are you sure you want to delete call #${deleteModalCall.id}? This will permanently remove the call recording, telemetry, and transcript from the PostgreSQL database.`}
+        />
+      )}
+
+      {/* Clear All Calls Confirmation Modal */}
+      {clearAllConfirmOpen && (
+        <ConfirmDeleteModal
+          isOpen={clearAllConfirmOpen}
+          onClose={() => setClearAllConfirmOpen(false)}
+          onConfirm={async () => {
+            await clearAllCalls();
+          }}
+          itemType="All Call Records"
+          itemName="All Call History"
+          description="Are you sure you want to delete ALL call records? This will permanently wipe all call telemetry, recordings, and transcripts from the PostgreSQL database."
+        />
+      )}
     </div>
   );
 }
