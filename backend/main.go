@@ -96,7 +96,6 @@ func main() {
 	r.POST("/simulator-api/chat", simulatorHandler.SimulateChat)
 	r.POST("/api/webhooks/telnyx", webhooksHandler.IngestTelnyxWebhook)
 	r.GET("/recordings/:id/audio", callsHandler.StreamRecordingAudio)
-	r.GET("/recordings/:id", callsHandler.StreamRecordingAudio)
 
 	api := r.Group("/api/v1")
 	{
@@ -121,7 +120,6 @@ func main() {
 		api.POST("/calls/end", callsHandler.EndCall)
 		api.POST("/calls/recordings/upload", callsHandler.UploadRecording)
 		api.GET("/recordings/:id/audio", callsHandler.StreamRecordingAudio)
-		api.GET("/recordings/:id", callsHandler.StreamRecordingAudio)
 		api.POST("/tts/synthesize", ttsHandler.SynthesizeSpeech)
 		api.POST("/rag/search", ragHandler.Search)
 		api.POST("/rag/query", ragHandler.Search)
