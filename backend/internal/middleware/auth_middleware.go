@@ -65,6 +65,7 @@ func AuthRequired(authService *services.AuthService) gin.HandlerFunc {
 		c.Set("email", claims.Email)
 		c.Set("role", claims.Role)
 		c.Set("tenantID", claims.TenantID)
+		c.Set("tenant_id", claims.TenantID)
 		c.Set("isPreview", claims.IsPreview)
 		c.Set("superAdminID", claims.SuperAdminID)
 

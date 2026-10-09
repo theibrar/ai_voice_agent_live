@@ -129,6 +129,7 @@ func main() {
 		api.POST("/rag/query", ragHandler.Search)
 		api.POST("/appointments", appointmentsHandler.CreateAppointment)
 		api.POST("/contacts", contactsHandler.CreateOrUpdateContact)
+		api.POST("/email/send", integrationsHandler.SendFlowEmail)
 
 		// Real-Time WebSocket Endpoint
 		api.GET("/ws/calls", func(c *gin.Context) {

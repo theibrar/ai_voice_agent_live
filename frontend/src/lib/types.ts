@@ -145,6 +145,11 @@ export interface Call {
   summary?: string;
   cost?: number;
   supervisorIntervened?: boolean;
+  errorReason?: string;
+  disconnectReason?: string;
+  sipStatusCode?: number;
+  appointmentBooked?: boolean;
+  emailSent?: boolean;
 }
 
 export type CampaignStatus = "active" | "paused" | "draft" | "completed";

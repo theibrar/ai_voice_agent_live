@@ -886,41 +886,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (data && Array.isArray(data.calls)) {
           setCalls(data.calls.map((c: any) => ({
             id: c.id || `call-${Date.now()}`,
-            callerName: c.callerName || c.contactName || "Jonathan Vance",
-            callerNumber: c.callerNumber || c.contactPhone || "+1 (555) 890-2341",
-            contactName: c.callerName || c.contactName || "Jonathan Vance",
-            contactPhone: c.callerNumber || c.contactPhone || "+1 (555) 890-2341",
+            callerName: c.callerName || c.contactName || "Direct Caller",
+            callerNumber: c.callerNumber || c.contactPhone || "Inbound Lead",
+            contactName: c.callerName || c.contactName || "Direct Caller",
+            contactPhone: c.callerNumber || c.contactPhone || "Inbound Lead",
             agentId: c.agentId || "agent-1",
-            agentName: c.agentName || "Rachel (Enterprise SDR)",
+            agentName: c.agentName || "Voice Agent",
             campaignId: c.campaignId || "camp-1",
-            campaignName: c.campaignName || "Inbound Solar Qualification",
+            campaignName: c.campaignName || "",
             direction: c.direction || "inbound",
-            status: c.status || "completed",
-            duration: c.duration || 60,
-            durationSeconds: c.duration || 60,
-            qualificationScore: c.qualificationScore || c.score || 85,
+            status: (c.status === "in_progress" || c.status === "live" ? "live" : (c.status || "completed")),
+            duration: c.duration || 0,
+            durationSeconds: c.duration || 0,
+            qualificationScore: c.qualificationScore || c.score || 80,
             startedAt: c.startedAt || new Date().toISOString(),
             recordingUrl: c.recordingUrl && !c.recordingUrl.includes("storage.apexvoice.ai") && !c.recordingUrl.includes("storage.googleapis.com")
               ? c.recordingUrl
               : (c.recording_url && !c.recording_url.includes("storage.apexvoice.ai") && !c.recording_url.includes("storage.googleapis.com")
                   ? c.recording_url
-                  : `/api/v1/recordings/${c.id || "sample"}/audio`),
-            tags: c.tags || ["Inbound Direct", "Verified Lead"],
-            transcript: typeof c.transcript === "string" && c.transcript.startsWith("[")
-              ? JSON.parse(c.transcript).map((t: any, idx: number) => ({
-                  id: `tr-${idx}`,
-                  speaker: t.speaker || "agent",
-                  text: t.text || "",
-                  timestamp: typeof t.timestamp === "number" ? new Date(t.timestamp * 1000).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }) : (t.timestamp || "12:00:00"),
-                }))
-              : [
-                  { id: "tr-1", speaker: "user", text: "Hi, I would like to schedule a solar consultation.", timestamp: "12:00:02" },
-                  { id: "tr-2", speaker: "agent", text: "Absolutely, I'd be glad to walk you through our commercial packages.", timestamp: "12:00:06" }
-                ],
+                  : ""),
+            tags: c.tags || ["Live Telemetry"],
+            transcript: typeof c.transcript === "string" && c.transcript.trim() !== ""
+              ? (c.transcript.startsWith("[")
+                  ? (() => { try { return JSON.parse(c.transcript); } catch { return []; } })()
+                  : c.transcript.split("\n").filter((l: string) => l.trim()).map((line: string, idx: number) => {
+                      const isAgent = line.toLowerCase().startsWith("agent:") || line.toLowerCase().startsWith("ai:");
+                      return {
+                        id: `tr-${idx}`,
+                        speaker: isAgent ? "agent" : "user",
+                        text: line.replace(/^(agent|ai|caller|user):\s*/i, ""),
+                        timestamp: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+                      };
+                    }))
+              : [],
             sentiment: c.sentiment || "positive",
-            sentimentScore: 0.88,
-            keywords: ["solar", "commercial", "consultation", "pricing"],
-            cost: (c.duration ? (c.duration + 59) / 60 : 1) * 0.05,
+            sentimentScore: 0.85,
+            errorReason: c.errorReason || "",
+            disconnectReason: c.disconnectReason || "",
+            sipStatusCode: c.sipStatusCode || 200,
+            cost: (c.duration ? (c.duration + 59) / 60 : 0) * 0.05,
           })));
         }
       }

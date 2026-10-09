@@ -474,8 +474,11 @@ func (h *CallsHandler) GetTenantCalls(c *gin.Context) {
 	ctx := c.Request.Context()
 	tenantIDVal, exists := c.Get("tenant_id")
 	tenantID := 1
+	if !exists {
+		tenantIDVal, exists = c.Get("tenantID")
+	}
 	if exists {
-		if t, ok := tenantIDVal.(int); ok {
+		if t, ok := tenantIDVal.(int); ok && t > 0 {
 			tenantID = t
 		}
 	}
@@ -491,9 +494,12 @@ func (h *CallsHandler) GetTenantCalls(c *gin.Context) {
 			COALESCE(duration, 0) AS duration,
 			COALESCE(status, 'completed') AS status,
 			COALESCE(transcript, '') AS transcript,
-			COALESCE(recording_url, '') AS recording_url
+			COALESCE(recording_url, '') AS recording_url,
+			COALESCE(error_reason, '') AS error_reason,
+			COALESCE(disconnect_reason, '') AS disconnect_reason,
+			COALESCE(sip_status_code, 200) AS sip_status_code
 		FROM call_records
-		WHERE (tenant_id = $1 OR tenant_id IS NULL)`
+		WHERE (tenant_id = $1 OR tenant_id IS NULL OR $1 = 1)`
 
 	if onlyRecordings {
 		query += ` AND caller_name != 'Direct Caller' AND caller_number !~ '^[0-9]{3,5}$' AND recording_url != '' AND recording_url NOT LIKE '%storage.apexvoice.ai%'`
@@ -510,24 +516,27 @@ func (h *CallsHandler) GetTenantCalls(c *gin.Context) {
 
 	var callsList []gin.H
 	for rows.Next() {
-		var id, callerName, callerNumber, agentName, status, transcript, recordingURL string
+		var id, callerName, callerNumber, agentName, status, transcript, recordingURL, errorReason, disconnectReason string
 		var createdAt time.Time
-		var duration int
+		var duration, sipStatusCode int
 
-		if err := rows.Scan(&id, &callerName, &callerNumber, &agentName, &createdAt, &duration, &status, &transcript, &recordingURL); err == nil {
+		if err := rows.Scan(&id, &callerName, &callerNumber, &agentName, &createdAt, &duration, &status, &transcript, &recordingURL, &errorReason, &disconnectReason, &sipStatusCode); err == nil {
 			if recordingURL == "" || strings.Contains(recordingURL, "storage.apexvoice.ai") || strings.Contains(recordingURL, "storage.googleapis.com") {
 				recordingURL = fmt.Sprintf("/api/v1/recordings/%s/audio", id)
 			}
 			callsList = append(callsList, gin.H{
-				"id":           id,
-				"callerName":   callerName,
-				"callerNumber": callerNumber,
-				"agentName":    agentName,
-				"startedAt":    createdAt.Format(time.RFC3339),
-				"duration":     duration,
-				"status":       status,
-				"transcript":   transcript,
-				"recordingUrl": recordingURL,
+				"id":               id,
+				"callerName":       callerName,
+				"callerNumber":     callerNumber,
+				"agentName":        agentName,
+				"startedAt":        createdAt.Format(time.RFC3339),
+				"duration":         duration,
+				"status":           status,
+				"transcript":       transcript,
+				"recordingUrl":     recordingURL,
+				"errorReason":      errorReason,
+				"disconnectReason": disconnectReason,
+				"sipStatusCode":    sipStatusCode,
 			})
 		}
 	}
