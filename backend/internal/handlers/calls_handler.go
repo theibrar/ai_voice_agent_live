@@ -512,7 +512,11 @@ func (h *CallsHandler) GetTenantCalls(c *gin.Context) {
 func getRecordingsDir() string {
 	dir := os.Getenv("RECORDINGS_DIR")
 	if dir == "" {
-		dir = "./recordings"
+		if _, err := os.Stat("/app/recordings"); err == nil {
+			dir = "/app/recordings"
+		} else {
+			dir = "./recordings"
+		}
 	}
 	_ = os.MkdirAll(dir, 0755)
 	return dir

@@ -2,6 +2,7 @@ package config
 
 import (
 	"log"
+	"os"
 
 	"github.com/spf13/viper"
 )
@@ -50,12 +51,46 @@ func LoadConfig() (*Config, error) {
 	viper.AutomaticEnv()
 
 	if err := viper.ReadInConfig(); err != nil {
-		log.Printf("Warning: .env file not found, using default/environment variables: %v", err)
+		log.Printf("Notice: Local .env file not loaded directly (%v), relying on active process environment variables.", err)
 	}
 
 	var cfg Config
 	if err := viper.Unmarshal(&cfg); err != nil {
 		return nil, err
+	}
+
+	// Always prioritize direct environment variables passed by Docker Compose / Host
+	if h := os.Getenv("DB_HOST"); h != "" {
+		cfg.DBHost = h
+	}
+	if p := os.Getenv("DB_PORT"); p != "" {
+		cfg.DBPort = p
+	}
+	if u := os.Getenv("DB_USER"); u != "" {
+		cfg.DBUser = u
+	}
+	if pass := os.Getenv("DB_PASSWORD"); pass != "" {
+		cfg.DBPassword = pass
+	}
+	if n := os.Getenv("DB_NAME"); n != "" {
+		cfg.DBName = n
+	}
+	if ssl := os.Getenv("DB_SSLMODE"); ssl != "" {
+		cfg.DBSSLMode = ssl
+	} else if cfg.DBSSLMode == "" {
+		cfg.DBSSLMode = "disable"
+	}
+	if rHost := os.Getenv("REDIS_HOST"); rHost != "" {
+		cfg.RedisHost = rHost
+	}
+	if rPort := os.Getenv("REDIS_PORT"); rPort != "" {
+		cfg.RedisPort = rPort
+	}
+	if rPass := os.Getenv("REDIS_PASSWORD"); rPass != "" {
+		cfg.RedisPassword = rPass
+	}
+	if jwt := os.Getenv("JWT_SECRET"); jwt != "" {
+		cfg.JWTSecret = jwt
 	}
 
 	return &cfg, nil

@@ -64,8 +64,11 @@ services:
       - OPENAI_API_KEY=${OPENAI_API_KEY:-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}
       - GEMINI_API_KEY=${GEMINI_API_KEY:-AQ.Ab8RN6JyfBrZTS8O8PnGvOTH59Aqm0F3V98uUcs9RDzbbCmlFQ}
       - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-sk-6afcb9c9ea194924b7037362f7aaa30f}
+      - DB_SSLMODE=${DB_SSLMODE:-disable}
+      - RECORDINGS_DIR=/app/recordings
     volumes:
       - ./recordings:/app/recordings
+      - ./.env:/root/.env:ro
     depends_on:
       - postgres
       - redis

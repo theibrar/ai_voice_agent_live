@@ -9,10 +9,13 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/ramzan/backend-chatbot/internal/config"
 )
-
 func NewPostgresPool(cfg *config.Config) (*pgxpool.Pool, error) {
+	sslMode := cfg.DBSSLMode
+	if sslMode == "" {
+		sslMode = "disable"
+	}
 	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=%s",
-		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName, cfg.DBSSLMode)
+		cfg.DBUser, cfg.DBPassword, cfg.DBHost, cfg.DBPort, cfg.DBName, sslMode)
 
 	poolConfig, err := pgxpool.ParseConfig(dsn)
 	if err != nil {
