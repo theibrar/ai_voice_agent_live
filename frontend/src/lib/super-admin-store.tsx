@@ -179,9 +179,9 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
 
   const [currentSuperAdmin, setCurrentSuperAdmin] = useState<SuperAdminUser>(initialSuperAdmins[0]);
   const [superAdminSidebarCollapsed, setSuperAdminSidebarCollapsed] = useState(false);
-  const [superAdmins, setSuperAdmins] = useState<SuperAdminUser[]>(initialSuperAdmins);
-  const [tenants, setTenants] = useState<TenantAdminOrg[]>(initialTenantOrgs);
-  const [plans, setPlans] = useState<PlatformPlan[]>(initialPlatformPlans);
+  const [superAdmins, setSuperAdmins] = useState<SuperAdminUser[]>([]);
+  const [tenants, setTenants] = useState<TenantAdminOrg[]>([]);
+  const [plans, setPlans] = useState<PlatformPlan[]>([]);
   const [gateways, setGateways] = useState<GatewayConfig[]>([]);
   const [sipCarriers, setSipCarriers] = useState<SipCarrierNetwork[]>([]);
   const defaultMasterEngines: VoiceAiEngine[] = [
@@ -274,7 +274,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
 
   const [engines, setEngines] = useState<VoiceAiEngine[]>(defaultMasterEngines);
   const [globalCalls, setGlobalCalls] = useState<GlobalCallSession[]>([]);
-  const [announcements, setAnnouncements] = useState<SystemAnnouncement[]>(initialAnnouncements);
+  const [announcements, setAnnouncements] = useState<SystemAnnouncement[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogEntry[]>([]);
   const [toasts, setToasts] = useState<SuperAdminToast[]>([]);
 
@@ -457,7 +457,7 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
 
   const refreshGlobalCalls = useCallback(async () => {
     try {
-      const apiUrl = getApiBase() + '/calls';
+      const apiUrl = getApiBase() + '/calls?all=true';
       const res = await fetch(apiUrl, {
         method: "GET",
         credentials: "include",
@@ -468,15 +468,19 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
         if (data && Array.isArray(data.calls)) {
           setGlobalCalls(data.calls.map((c: any) => ({
             id: c.id,
-            tenantId: `tenant-${c.tenantId || 1}`,
-            tenantName: c.tenantName || "Apex Clean Energy Corp",
-            agentName: c.agentName || "Rachel (Enterprise SDR)",
-            callerName: c.callerName || c.contactName || "Jonathan Vance",
-            callerNumber: c.callerNumber || c.contactPhone || "+1 (555) 890-2341",
-            duration: c.duration || 60,
+            tenantId: c.tenantId || `tenant-1`,
+            tenantName: c.tenantName || "Direct Organization",
+            agentName: c.agentName || "AI Voice Agent",
+            callerName: c.callerName || c.contactName || "Direct Caller",
+            callerNumber: c.callerNumber || c.contactPhone || "—",
+            duration: c.duration || 0,
+            durationSeconds: c.durationSeconds || c.duration || 0,
             status: c.status || "completed",
-            gateway: "LiveKit Cluster #1 (SF-01)",
-            costPerMin: 0.05,
+            carrier: c.carrier || "Telnyx Elastic SIP Trunk",
+            llmModel: c.llmModel || "Qwen/Qwen2.5-7B-Instruct-AWQ",
+            ttsVoice: c.ttsVoice || "Kokoro-82M",
+            sttEngine: c.sttEngine || "Faster-Whisper distil-large-v3",
+            costPerMin: 0.08,
             startedAt: c.startedAt || new Date().toISOString(),
           })));
         }
@@ -486,12 +490,9 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  // Live Database API fetch on mount (only if authenticated)
+  // Live Database API fetch on mount
   React.useEffect(() => {
     if (typeof window === "undefined") return;
-    if (typeof document !== "undefined" && !document.cookie.includes("access_token=")) {
-      return;
-    }
     refreshTenants();
     refreshPlans();
     refreshEngines();

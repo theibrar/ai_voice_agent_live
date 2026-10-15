@@ -18,7 +18,11 @@ import {
 } from "lucide-react";
 
 export default function SuperAdminCallsPage() {
-  const { globalCalls, forceTerminateCall, tenants, addToast } = useSuperAdminStore();
+  const { globalCalls, refreshGlobalCalls, forceTerminateCall, tenants, addToast } = useSuperAdminStore();
+
+  React.useEffect(() => {
+    refreshGlobalCalls();
+  }, [refreshGlobalCalls]);
 
   const [searchQuery, setSearchQuery] = useState("");
   const [tenantFilter, setTenantFilter] = useState("all");
@@ -156,63 +160,71 @@ export default function SuperAdminCallsPage() {
               </tr>
             </thead>
             <tbody className="divide-y divide-[#E2E8F0]">
-              {filteredCalls.map((call) => {
-                const isLive = call.status === "in_progress";
+              {filteredCalls.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="p-8 text-center text-[#64748B] text-xs">
+                    No active or past call sessions recorded in database yet.
+                  </td>
+                </tr>
+              ) : (
+                filteredCalls.map((call) => {
+                  const isLive = call.status === "in_progress";
 
-                return (
-                  <tr key={call.id} className="hover:bg-[#EEF2FD]/40 transition-colors">
-                    <td className="p-3 font-bold text-[#0F172A] whitespace-nowrap">
-                      <div>
-                        <p>{call.tenantName}</p>
-                        <p className="text-[10px] text-[#64748B] font-mono">{call.tenantId}</p>
-                      </div>
-                    </td>
-                    <td className="p-3 whitespace-nowrap">
-                      <div>
-                        <p className="font-bold text-[#0F172A]">{call.callerName}</p>
-                        <p className="text-[10px] text-[#64748B] font-mono">{call.callerNumber}</p>
-                      </div>
-                    </td>
-                    <td className="p-3 text-[#0F172A] font-semibold whitespace-nowrap">{call.agentName || "Rachel (Enterprise SDR)"}</td>
-                    <td className="p-3 font-mono text-[11px] text-[#64748B] whitespace-nowrap">{call.carrier || "Telnyx SIP Trunk"}</td>
-                    <td className="p-3 whitespace-nowrap">
-                      <div className="space-y-0.5">
-                        <span className="text-[10px] font-bold text-[#3157D5] bg-[#EEF2FD] px-1.5 py-0.2 rounded inline-block">
-                          {call.llmModel || "Qwen/Qwen2.5-7B-Instruct-AWQ"}
+                  return (
+                    <tr key={call.id} className="hover:bg-[#EEF2FD]/40 transition-colors">
+                      <td className="p-3 font-bold text-[#0F172A] whitespace-nowrap">
+                        <div>
+                          <p>{call.tenantName || "Direct Tenant"}</p>
+                          <p className="text-[10px] text-[#64748B] font-mono">{call.tenantId}</p>
+                        </div>
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        <div>
+                          <p className="font-bold text-[#0F172A]">{call.callerName || "Direct Caller"}</p>
+                          <p className="text-[10px] text-[#64748B] font-mono">{call.callerNumber || "—"}</p>
+                        </div>
+                      </td>
+                      <td className="p-3 text-[#0F172A] font-semibold whitespace-nowrap">{call.agentName || "AI Voice Agent"}</td>
+                      <td className="p-3 font-mono text-[11px] text-[#64748B] whitespace-nowrap">{call.carrier || "Telnyx Elastic SIP Trunk"}</td>
+                      <td className="p-3 whitespace-nowrap">
+                        <div className="space-y-0.5">
+                          <span className="text-[10px] font-bold text-[#3157D5] bg-[#EEF2FD] px-1.5 py-0.2 rounded inline-block">
+                            {call.llmModel || "Qwen/Qwen2.5-7B-Instruct-AWQ"}
+                          </span>
+                          <p className="text-[9px] text-[#64748B]">{call.ttsVoice || "Kokoro-82M"} • {call.sttEngine || "Faster-Whisper distil-large-v3"}</p>
+                        </div>
+                      </td>
+                      <td className="p-3 font-mono font-semibold text-[#0F172A] whitespace-nowrap">
+                        {Math.floor(((call.durationSeconds || (call as any).duration || 0)) / 60)}m {((call.durationSeconds || (call as any).duration || 0)) % 60}s
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          isLive
+                            ? "bg-emerald-50 text-emerald-600 border border-emerald-200 animate-pulse"
+                            : (call.status || "completed") === "completed"
+                            ? "bg-[#EEF2FD] text-[#3157D5]"
+                            : "bg-rose-50 text-rose-600"
+                        }`}>
+                          {(call.status || "completed").replace("_", " ")}
                         </span>
-                        <p className="text-[9px] text-[#64748B]">{call.ttsVoice || "Kokoro-82M (af_bella)"} • {call.sttEngine || "Faster-Whisper distil-large-v3"}</p>
-                      </div>
-                    </td>
-                    <td className="p-3 font-mono font-semibold text-[#0F172A] whitespace-nowrap">
-                      {Math.floor(((call.durationSeconds || (call as any).duration || 60)) / 60)}m {((call.durationSeconds || (call as any).duration || 60)) % 60}s
-                    </td>
-                    <td className="p-3 whitespace-nowrap">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        isLive
-                          ? "bg-emerald-50 text-emerald-600 border border-emerald-200 animate-pulse"
-                          : (call.status || "completed") === "completed"
-                          ? "bg-[#EEF2FD] text-[#3157D5]"
-                          : "bg-rose-50 text-rose-600"
-                      }`}>
-                        {(call.status || "completed").replace("_", " ")}
-                      </span>
-                    </td>
-                    <td className="p-3 whitespace-nowrap">
-                      {isLive ? (
-                        <button
-                          onClick={() => forceTerminateCall(call.id)}
-                          className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] rounded-xl transition-all shadow-xs flex items-center gap-1"
-                        >
-                          <XCircle className="w-3.5 h-3.5" />
-                          <span>Force End</span>
-                        </button>
-                      ) : (
-                        <span className="text-[11px] text-[#94A3B8] italic">Archived</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
+                      </td>
+                      <td className="p-3 whitespace-nowrap">
+                        {isLive ? (
+                          <button
+                            onClick={() => forceTerminateCall(call.id)}
+                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white font-bold text-[11px] rounded-xl transition-all shadow-xs flex items-center gap-1"
+                          >
+                            <XCircle className="w-3.5 h-3.5" />
+                            <span>Force End</span>
+                          </button>
+                        ) : (
+                          <span className="text-[11px] text-[#94A3B8] italic">Archived</span>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
             </tbody>
           </table>
         </div>

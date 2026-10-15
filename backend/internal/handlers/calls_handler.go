@@ -11,6 +11,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 
@@ -472,6 +473,7 @@ func (h *CallsHandler) EndCall(c *gin.Context) {
 // GET /api/v1/calls
 func (h *CallsHandler) GetTenantCalls(c *gin.Context) {
 	ctx := c.Request.Context()
+	userRole, _ := c.Get("userRole")
 	tenantIDVal, exists := c.Get("tenant_id")
 	tenantID := 1
 	if !exists {
@@ -483,31 +485,54 @@ func (h *CallsHandler) GetTenantCalls(c *gin.Context) {
 		}
 	}
 
+	isSuperAdmin := userRole == "super_admin"
+	tenantFilterQuery := strings.TrimSpace(c.Query("tenant_id"))
+	allParam := c.Query("all") == "true"
+	fetchAll := false
+	filterTenantID := tenantID
+
+	if isSuperAdmin || allParam || tenantFilterQuery != "" {
+		if allParam || (isSuperAdmin && (tenantFilterQuery == "" || tenantFilterQuery == "all")) {
+			fetchAll = true
+		} else if tenantFilterQuery != "" {
+			clean := strings.TrimPrefix(tenantFilterQuery, "tenant-")
+			if id, err := strconv.Atoi(clean); err == nil {
+				filterTenantID = id
+			}
+		}
+	}
+
 	onlyRecordings := c.Query("only_recordings") == "true"
 	query := `
 		SELECT 
-			COALESCE(call_id, id::text) AS id,
-			COALESCE(caller_name, 'Direct Caller') AS caller_name,
-			COALESCE(caller_number, '') AS caller_number,
-			COALESCE(agent_name, 'Voice Agent') AS agent_name,
-			created_at,
-			COALESCE(duration, 0) AS duration,
-			COALESCE(status, 'completed') AS status,
-			COALESCE(transcript, '') AS transcript,
-			COALESCE(recording_url, '') AS recording_url,
-			COALESCE(error_reason, '') AS error_reason,
-			COALESCE(disconnect_reason, '') AS disconnect_reason,
-			COALESCE(sip_status_code, 200) AS sip_status_code
-		FROM call_records
-		WHERE (tenant_id = $1 OR tenant_id IS NULL OR $1 = 1)`
+			COALESCE(cr.call_id, cr.id::text) AS id,
+			COALESCE(cr.caller_name, 'Direct Caller') AS caller_name,
+			COALESCE(cr.caller_number, '') AS caller_number,
+			COALESCE(cr.agent_name, 'Voice Agent') AS agent_name,
+			cr.created_at,
+			COALESCE(cr.duration, 0) AS duration,
+			COALESCE(cr.status, 'completed') AS status,
+			COALESCE(cr.transcript, '') AS transcript,
+			COALESCE(cr.recording_url, '') AS recording_url,
+			COALESCE(cr.error_reason, '') AS error_reason,
+			COALESCE(cr.disconnect_reason, '') AS disconnect_reason,
+			COALESCE(cr.sip_status_code, 200) AS sip_status_code,
+			COALESCE(cr.tenant_id, 1) AS tenant_id,
+			COALESCE(t.tenant_name, 'Direct Tenant') AS tenant_name,
+			COALESCE(cr.llm_model, 'Qwen/Qwen2.5-7B-Instruct-AWQ') AS llm_model,
+			COALESCE(cr.tts_model, 'Kokoro-82M') AS tts_model,
+			COALESCE(cr.stt_model, 'Faster-Whisper distil-large-v3') AS stt_model
+		FROM call_records cr
+		LEFT JOIN tenants t ON cr.tenant_id = t.id
+		WHERE ($1 = true OR cr.tenant_id = $2 OR cr.tenant_id IS NULL)`
 
 	if onlyRecordings {
-		query += ` AND caller_name != 'Direct Caller' AND caller_number !~ '^[0-9]{3,5}$' AND recording_url != '' AND recording_url NOT LIKE '%storage.apexvoice.ai%'`
+		query += ` AND cr.caller_name != 'Direct Caller' AND cr.caller_number !~ '^[0-9]{3,5}$' AND cr.recording_url != '' AND cr.recording_url NOT LIKE '%storage.apexvoice.ai%'`
 	}
 
-	query += ` ORDER BY created_at DESC LIMIT 100`
+	query += ` ORDER BY cr.created_at DESC LIMIT 200`
 
-	rows, err := h.dbPool.Query(ctx, query, tenantID)
+	rows, err := h.dbPool.Query(ctx, query, fetchAll, filterTenantID)
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{"calls": []gin.H{}})
 		return
@@ -516,27 +541,33 @@ func (h *CallsHandler) GetTenantCalls(c *gin.Context) {
 
 	var callsList []gin.H
 	for rows.Next() {
-		var id, callerName, callerNumber, agentName, status, transcript, recordingURL, errorReason, disconnectReason string
+		var id, callerName, callerNumber, agentName, status, transcript, recordingURL, errorReason, disconnectReason, tenantName, llmModel, ttsModel, sttModel string
 		var createdAt time.Time
-		var duration, sipStatusCode int
+		var duration, sipStatusCode, tID int
 
-		if err := rows.Scan(&id, &callerName, &callerNumber, &agentName, &createdAt, &duration, &status, &transcript, &recordingURL, &errorReason, &disconnectReason, &sipStatusCode); err == nil {
+		if err := rows.Scan(&id, &callerName, &callerNumber, &agentName, &createdAt, &duration, &status, &transcript, &recordingURL, &errorReason, &disconnectReason, &sipStatusCode, &tID, &tenantName, &llmModel, &ttsModel, &sttModel); err == nil {
 			if recordingURL == "" || strings.Contains(recordingURL, "storage.apexvoice.ai") || strings.Contains(recordingURL, "storage.googleapis.com") {
 				recordingURL = fmt.Sprintf("/api/v1/recordings/%s/audio", id)
 			}
 			callsList = append(callsList, gin.H{
 				"id":               id,
+				"tenantId":         fmt.Sprintf("tenant-%d", tID),
+				"tenantName":       tenantName,
 				"callerName":       callerName,
 				"callerNumber":     callerNumber,
 				"agentName":        agentName,
 				"startedAt":        createdAt.Format(time.RFC3339),
 				"duration":         duration,
+				"durationSeconds":  duration,
 				"status":           status,
 				"transcript":       transcript,
 				"recordingUrl":     recordingURL,
 				"errorReason":      errorReason,
 				"disconnectReason": disconnectReason,
 				"sipStatusCode":    sipStatusCode,
+				"llmModel":         llmModel,
+				"ttsVoice":         ttsModel,
+				"sttEngine":        sttModel,
 			})
 		}
 	}

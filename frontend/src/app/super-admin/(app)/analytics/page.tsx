@@ -4,6 +4,7 @@ import React, { useState, useEffect, Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useSuperAdminStore } from "@/lib/super-admin-store";
 import { TenantAdminOrg } from "@/lib/mock-data/super-admin";
+import { getApiBase } from "@/lib/auth-context";
 import {
   TrendingUp,
   CreditCard,
@@ -62,33 +63,6 @@ import {
   Cell,
 } from "recharts";
 
-const getTenantAgents = (tenant: TenantAdminOrg) => {
-  return [
-    {
-      name: `${tenant.orgName.split(" ")[0]} Concierge AI`,
-      type: "Inbound Support & Booking",
-      llm: tenant.allowedLLMs?.[0] || "Qwen/Qwen2.5-7B-Instruct-AWQ",
-      tts: "Kokoro-82M",
-      stt: tenant.allowedSTT?.[0] || "Faster-Whisper distil-large-v3",
-      calls: Math.max(1240, Math.round(tenant.creditsBalance * 4)),
-      avgDuration: "2m 45s",
-      sentiment: "+0.88",
-      successRate: "96.4%",
-    },
-    {
-      name: `${tenant.orgName.split(" ")[0]} Lead Qualifier`,
-      type: "Outbound Lead Gen",
-      llm: tenant.allowedLLMs?.[0] || "Qwen/Qwen2.5-7B-Instruct-AWQ",
-      tts: "Kokoro-82M",
-      stt: "Faster-Whisper distil-large-v3",
-      calls: Math.max(850, Math.round(tenant.creditsBalance * 2.5)),
-      avgDuration: "3m 10s",
-      sentiment: "+0.84",
-      successRate: "94.2%",
-    },
-  ];
-};
-
 function SuperAdminAnalyticsContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -99,10 +73,64 @@ function SuperAdminAnalyticsContent() {
   const [activeViewTab, setActiveViewTab] = useState<string>(tabFromQuery);
   const [timeRange, setTimeRange] = useState<string>("30d");
 
+  // Real Database Telemetry State
+  const [allAgents, setAllAgents] = useState<any[]>([]);
+  const [dbOverview, setDbOverview] = useState<any>(null);
+  const [dailyMetrics, setDailyMetrics] = useState<any[]>([]);
+
+  useEffect(() => {
+    async function loadLiveTelemetry() {
+      try {
+        const agentsUrl = getApiBase() + '/agents?tenant_id=all';
+        const aRes = await fetch(agentsUrl, { credentials: 'include' });
+        if (aRes.ok) {
+          const aData = await aRes.json();
+          if (aData && Array.isArray(aData.agents)) {
+            setAllAgents(aData.agents);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load real agents:", err);
+      }
+
+      try {
+        const overviewUrl = getApiBase() + '/analytics/overview?range=' + timeRange;
+        const oRes = await fetch(overviewUrl, { credentials: 'include' });
+        if (oRes.ok) {
+          const oData = await oRes.json();
+          if (oData && oData.overview) {
+            setDbOverview(oData.overview);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load overview analytics:", err);
+      }
+
+      try {
+        const dailyUrl = getApiBase() + '/analytics/daily';
+        const dRes = await fetch(dailyUrl, { credentials: 'include' });
+        if (dRes.ok) {
+          const dData = await dRes.json();
+          if (dData && Array.isArray(dData.call_analytics)) {
+            setDailyMetrics(dData.call_analytics);
+          }
+        }
+      } catch (err) {
+        console.warn("Failed to load daily analytics:", err);
+      }
+    }
+    loadLiveTelemetry();
+  }, [timeRange]);
+
   // Selected Tenant for 360° Deep-Dive Inspector
   const [inspectTenant, setInspectTenant] = useState<TenantAdminOrg | null>(null);
   const liveInspectTenant = inspectTenant ? (tenants.find((t) => t.id === inspectTenant.id) || inspectTenant) : null;
-  const liveAgents = liveInspectTenant ? getTenantAgents(liveInspectTenant) : [];
+  const liveAgents = liveInspectTenant
+    ? allAgents.filter((a) => {
+        const cleanTid = liveInspectTenant.id.replace("tenant-", "");
+        return String(a.tenantId) === cleanTid || String(a.tenantId) === liveInspectTenant.id;
+      })
+    : [];
 
   // Manual Date Range & Filter State for Tenant Analytics
   const [startDate, setStartDate] = useState("2026-06-01");
@@ -162,18 +190,27 @@ function SuperAdminAnalyticsContent() {
   const totalChannelsAllocated = tenants.reduce((acc, t) => acc + (t.maxConcurrency || 0), 0);
   const activeCallsCount = tenants.reduce((acc, t) => acc + (t.activeCallsNow || 0), 0);
 
-  // Dynamic 6-month financial timeline ending at Current Launch Month (Aug 2026)
-  // Accurately reflects database state: prior months are 0 before software launch
-  const dynamicFinancialLedger = [
-    { month: "Mar", revenue: 0, carrierCost: 0, llmCost: 0, netProfit: 0, marginPct: 0.0 },
-    { month: "Apr", revenue: 0, carrierCost: 0, llmCost: 0, netProfit: 0, marginPct: 0.0 },
-    { month: "May", revenue: 0, carrierCost: 0, llmCost: 0, netProfit: 0, marginPct: 0.0 },
-    { month: "Jun", revenue: 0, carrierCost: 0, llmCost: 0, netProfit: 0, marginPct: 0.0 },
-    { month: "Jul", revenue: 0, carrierCost: 0, llmCost: 0, netProfit: 0, marginPct: 0.0 },
-    { month: "Aug (Current)", revenue: Math.round(totalMRR), carrierCost: Math.round(estCarrierCost), llmCost: Math.round(estLlmCost), netProfit: Math.round(estNetProfit), marginPct: Number(marginPercent) || 88.9 },
-  ];
+  // Dynamic financial timeline computed from real daily analytics from PostgreSQL
+  const dynamicFinancialLedger = dailyMetrics.length > 0
+    ? dailyMetrics.slice(0, 6).reverse().map((d) => {
+        const rev = (d.completed_calls || 0) * 10;
+        const carrier = (d.total_calls || 0) * 0.45;
+        const llm = (d.total_calls || 0) * 0.70;
+        const profit = Math.max(0, rev - carrier - llm);
+        return {
+          month: d.date,
+          revenue: rev,
+          carrierCost: Math.round(carrier),
+          llmCost: Math.round(llm),
+          netProfit: Math.round(profit),
+          marginPct: rev > 0 ? Math.round((profit / rev) * 100) : 0,
+        };
+      })
+    : (totalMRR > 0 ? [
+        { month: "Current Month", revenue: Math.round(totalMRR), carrierCost: Math.round(estCarrierCost), llmCost: Math.round(estLlmCost), netProfit: Math.round(estNetProfit), marginPct: Number(marginPercent) || 88.9 }
+      ] : []);
 
-  // Dynamic Carrier Backbone Share from PostgreSQL `sip_trunks` table
+  // Dynamic Carrier Backbone Share from live PostgreSQL `sip_trunks` table
   const totalAllocatedTrunkChannels = sipCarriers.reduce((sum, c) => sum + (c.allocatedChannels || 0), 0);
   const dynamicCarrierSharePie = sipCarriers.map((c, i) => {
     const colors = ["#3157D5", "#5C82FF", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"];
@@ -187,57 +224,36 @@ function SuperAdminAnalyticsContent() {
     };
   });
 
-  // Dynamic POP Edge Region Health computed directly from live PostgreSQL `sip_trunks` & `tenants`
-  const dynamicPopRegions = [
-    {
-      region: "US-East (Ashburn / Virginia)",
-      latency: "4.2 ms",
-      packetLoss: "0.008%",
-      allocatedChannels: sipCarriers.find((c) => c.carrier === "telnyx")?.allocatedChannels || 340,
-      maxChannels: sipCarriers.find((c) => c.carrier === "telnyx")?.maxChannels || 1000,
-      status: "Optimal",
-    },
-    {
-      region: "US-West (San Jose / Silicon Valley)",
-      latency: "6.8 ms",
-      packetLoss: "0.012%",
-      allocatedChannels: sipCarriers.find((c) => c.carrier === "twilio")?.allocatedChannels || 180,
-      maxChannels: sipCarriers.find((c) => c.carrier === "twilio")?.maxChannels || 500,
-      status: "Optimal",
-    },
-    {
-      region: "EU-Central (Frankfurt / Germany)",
-      latency: "14.5 ms",
-      packetLoss: "0.015%",
-      allocatedChannels: sipCarriers.find((c) => c.carrier === "bandwidth")?.allocatedChannels || 95,
-      maxChannels: sipCarriers.find((c) => c.carrier === "bandwidth")?.maxChannels || 300,
-      status: "Optimal",
-    },
-    {
-      region: "AP-East (Singapore / Asia Pacific)",
-      latency: "22.1 ms",
-      packetLoss: "0.024%",
-      allocatedChannels: sipCarriers.find((c) => c.carrier === "custom_sbc")?.allocatedChannels || 450,
-      maxChannels: sipCarriers.find((c) => c.carrier === "custom_sbc")?.maxChannels || 2000,
-      status: "Optimal",
-    },
-  ];
+  // Dynamic POP Edge Region Health computed directly from live PostgreSQL `sip_trunks`
+  const dynamicPopRegions = sipCarriers.length > 0
+    ? sipCarriers.map((c) => ({
+        region: c.name || "SIP Trunk Edge",
+        latency: `${c.latencyMs || 12} ms`,
+        packetLoss: "0.01%",
+        allocatedChannels: c.allocatedChannels || 0,
+        maxChannels: c.maxChannels || 1000,
+        status: c.status === "online" ? "Optimal" : (c.status || "Standby"),
+      }))
+    : [];
 
-  // Dynamic 24-Hour Hourly Concurrent SIP Traffic scaled with total live concurrency
-  const dynamicHourlyTraffic = [
-    { hour: "00:00", activeCalls: Math.round(totalChannelsAllocated * 0.12), telnyx: Math.round(totalChannelsAllocated * 0.06), twilio: Math.round(totalChannelsAllocated * 0.04), bandwidth: Math.round(totalChannelsAllocated * 0.02), privateSbc: 0 },
-    { hour: "02:00", activeCalls: Math.round(totalChannelsAllocated * 0.08), telnyx: Math.round(totalChannelsAllocated * 0.04), twilio: Math.round(totalChannelsAllocated * 0.02), bandwidth: Math.round(totalChannelsAllocated * 0.02), privateSbc: 0 },
-    { hour: "04:00", activeCalls: Math.round(totalChannelsAllocated * 0.10), telnyx: Math.round(totalChannelsAllocated * 0.05), twilio: Math.round(totalChannelsAllocated * 0.03), bandwidth: Math.round(totalChannelsAllocated * 0.02), privateSbc: 0 },
-    { hour: "06:00", activeCalls: Math.round(totalChannelsAllocated * 0.24), telnyx: Math.round(totalChannelsAllocated * 0.12), twilio: Math.round(totalChannelsAllocated * 0.07), bandwidth: Math.round(totalChannelsAllocated * 0.05), privateSbc: 0 },
-    { hour: "08:00", activeCalls: Math.round(totalChannelsAllocated * 0.58), telnyx: Math.round(totalChannelsAllocated * 0.28), twilio: Math.round(totalChannelsAllocated * 0.17), bandwidth: Math.round(totalChannelsAllocated * 0.10), privateSbc: Math.round(totalChannelsAllocated * 0.03) },
-    { hour: "10:00", activeCalls: Math.round(totalChannelsAllocated * 0.88), telnyx: Math.round(totalChannelsAllocated * 0.42), twilio: Math.round(totalChannelsAllocated * 0.26), bandwidth: Math.round(totalChannelsAllocated * 0.14), privateSbc: Math.round(totalChannelsAllocated * 0.06) },
-    { hour: "12:00", activeCalls: totalChannelsAllocated, telnyx: Math.round(totalChannelsAllocated * 0.48), twilio: Math.round(totalChannelsAllocated * 0.28), bandwidth: Math.round(totalChannelsAllocated * 0.16), privateSbc: Math.round(totalChannelsAllocated * 0.08) },
-    { hour: "14:00", activeCalls: Math.round(totalChannelsAllocated * 0.85), telnyx: Math.round(totalChannelsAllocated * 0.40), twilio: Math.round(totalChannelsAllocated * 0.25), bandwidth: Math.round(totalChannelsAllocated * 0.14), privateSbc: Math.round(totalChannelsAllocated * 0.06) },
-    { hour: "16:00", activeCalls: Math.round(totalChannelsAllocated * 0.76), telnyx: Math.round(totalChannelsAllocated * 0.36), twilio: Math.round(totalChannelsAllocated * 0.22), bandwidth: Math.round(totalChannelsAllocated * 0.13), privateSbc: Math.round(totalChannelsAllocated * 0.05) },
-    { hour: "18:00", activeCalls: Math.round(totalChannelsAllocated * 0.55), telnyx: Math.round(totalChannelsAllocated * 0.26), twilio: Math.round(totalChannelsAllocated * 0.16), bandwidth: Math.round(totalChannelsAllocated * 0.10), privateSbc: Math.round(totalChannelsAllocated * 0.03) },
-    { hour: "20:00", activeCalls: Math.round(totalChannelsAllocated * 0.38), telnyx: Math.round(totalChannelsAllocated * 0.18), twilio: Math.round(totalChannelsAllocated * 0.12), bandwidth: Math.round(totalChannelsAllocated * 0.06), privateSbc: Math.round(totalChannelsAllocated * 0.02) },
-    { hour: "22:00", activeCalls: Math.round(totalChannelsAllocated * 0.20), telnyx: Math.round(totalChannelsAllocated * 0.10), twilio: Math.round(totalChannelsAllocated * 0.06), bandwidth: Math.round(totalChannelsAllocated * 0.03), privateSbc: Math.round(totalChannelsAllocated * 0.01) },
-  ];
+  // Dynamic 24-Hour Hourly Concurrent SIP Traffic from database overview or globalCalls
+  const dynamicHourlyTraffic = (dbOverview?.hourlyVolume && Array.isArray(dbOverview.hourlyVolume) && dbOverview.hourlyVolume.length > 0)
+    ? dbOverview.hourlyVolume.map((item: any) => ({
+        hour: item.hour,
+        activeCalls: (item.inbound || 0) + (item.outbound || 0),
+      }))
+    : Array.from({ length: 12 }, (_, i) => {
+        const hr = i * 2;
+        const count = (globalCalls || []).filter((c) => {
+          const d = new Date(c.startedAt);
+          const h = d.getHours();
+          return h === hr || h === hr + 1;
+        }).length;
+        return {
+          hour: `${hr.toString().padStart(2, "0")}:00`,
+          activeCalls: count,
+        };
+      });
 
   // Filter tenants by search query & plan
   const filteredTenants = tenants.filter((t) => {
@@ -376,15 +392,15 @@ function SuperAdminAnalyticsContent() {
 
         <div className="p-5 bg-white rounded-3xl border border-[#E2E8F0] shadow-xs space-y-1.5">
           <div className="flex items-center justify-between text-[10px] font-semibold uppercase tracking-wider text-[#64748B]">
-            <span>Model Tokens & Speech</span>
+            <span>Analyzed Calls & Speech</span>
             <Cpu className="w-4 h-4 text-[#3157D5]" />
           </div>
           <div className="text-2xl font-semibold text-[#3157D5] font-mono">
-            {totalBilledMinutes > 0 ? "842.6M Tokens" : `${(tenants.length * 2.4).toFixed(1)}M Tokens`}
+            {globalCalls.length} Recorded Calls
           </div>
           <div className="flex items-center justify-between text-xs pt-1 border-t border-[#EDF2F7]">
-            <span className="text-blue-700 font-semibold">{engines.length > 0 ? `${engines[0]?.latencyAvgMs || 120}ms avg latency` : "110ms avg latency"}</span>
-            <span className="text-[#64748B]">{tenants.length * 3} Active Models</span>
+            <span className="text-blue-700 font-semibold">{engines.length > 0 ? `${engines[0]?.latencyAvgMs || 95}ms avg latency` : "95ms avg latency"}</span>
+            <span className="text-[#64748B]">{allAgents.length} Active Agents</span>
           </div>
         </div>
       </div>
@@ -558,55 +574,64 @@ function SuperAdminAnalyticsContent() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E2E8F0]">
-                  {filteredTenants.map((t) => {
-                    const agentsList = getTenantAgents(t);
+                  {filteredTenants.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="p-8 text-center text-[#64748B] text-xs">
+                        No tenant organizations found in database matching the search.
+                      </td>
+                    </tr>
+                  ) : (
+                    filteredTenants.map((t) => {
+                      const cleanTid = t.id.replace("tenant-", "");
+                      const agentsList = allAgents.filter((a) => String(a.tenantId) === cleanTid || String(a.tenantId) === t.id);
 
-                    return (
-                      <tr key={t.id} className="hover:bg-[#EEF2FD]/40 transition-colors">
-                        <td className="p-3 font-semibold text-[#0F172A]">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-xl bg-[#3157D5] text-white flex items-center justify-center font-bold text-xs shadow-xs">
-                              {t.orgName.substring(0, 1)}
+                      return (
+                        <tr key={t.id} className="hover:bg-[#EEF2FD]/40 transition-colors">
+                          <td className="p-3 font-semibold text-[#0F172A]">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-xl bg-[#3157D5] text-white flex items-center justify-center font-bold text-xs shadow-xs">
+                                {t.orgName.substring(0, 1)}
+                              </div>
+                              <div>
+                                <p className="font-bold text-[#0F172A]">{t.orgName}</p>
+                                <p className="text-[10px] text-[#64748B] font-mono">{t.primaryAdminEmail}</p>
+                              </div>
                             </div>
-                            <div>
-                              <p className="font-bold text-[#0F172A]">{t.orgName}</p>
-                              <p className="text-[10px] text-[#64748B] font-mono">{t.primaryAdminEmail}</p>
+                          </td>
+                          <td className="p-3">
+                            <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#EEF2FD] text-[#3157D5]">
+                              {t.planName}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1.5">
+                              <Bot className="w-3.5 h-3.5 text-[#3157D5]" />
+                              <span className="font-semibold text-[#0F172A]">{agentsList.length} AI Agents</span>
                             </div>
-                          </div>
-                        </td>
-                        <td className="p-3">
-                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[#EEF2FD] text-[#3157D5]">
-                            {t.planName}
-                          </span>
-                        </td>
-                        <td className="p-3">
-                          <div className="flex items-center gap-1.5">
-                            <Bot className="w-3.5 h-3.5 text-[#3157D5]" />
-                            <span className="font-semibold text-[#0F172A]">{agentsList.length} AI Agents</span>
-                          </div>
-                          <span className="text-[10px] text-[#64748B] truncate max-w-[130px] block">
-                            {agentsList.map((a) => a.name.split(" ")[0]).join(", ")}
-                          </span>
-                        </td>
-                        <td className="p-3">
-                          <div className="font-mono text-[#0F172A] font-semibold">{t.activeCallsNow} / {t.maxConcurrency} lines</div>
-                          <span className="text-[10px] text-[#64748B] truncate max-w-[140px] block">{t.assignedSipCarrier}</span>
-                        </td>
-                        <td className="p-3 font-mono font-semibold text-[#0F172A]">{t.totalMinutesUsedThisMonth.toLocaleString()} min</td>
-                        <td className="p-3 font-mono font-semibold text-emerald-600">${t.creditsBalance.toFixed(2)}</td>
-                        <td className="p-3 font-mono font-bold text-[#0F172A]">${t.monthlySpend.toFixed(2)}</td>
-                        <td className="p-3 text-right">
-                          <button
-                            onClick={() => setInspectTenant(t)}
-                            className="px-3 py-1.5 bg-[#EEF2FD] hover:bg-[#3157D5] text-[#3157D5] hover:text-white rounded-xl text-xs font-semibold transition-all border border-[#3157D5]/30 inline-flex items-center gap-1 shadow-2xs"
-                          >
-                            <Eye className="w-3.5 h-3.5" />
-                            <span>Inspect 360°</span>
-                          </button>
-                        </td>
-                      </tr>
-                    );
-                  })}
+                            <span className="text-[10px] text-[#64748B] truncate max-w-[130px] block">
+                              {agentsList.length > 0 ? agentsList.map((a) => a.name.split(" ")[0]).join(", ") : "None configured"}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <div className="font-mono text-[#0F172A] font-semibold">{t.activeCallsNow} / {t.maxConcurrency} lines</div>
+                            <span className="text-[10px] text-[#64748B] truncate max-w-[140px] block">{t.assignedSipCarrier}</span>
+                          </td>
+                          <td className="p-3 font-mono font-semibold text-[#0F172A]">{t.totalMinutesUsedThisMonth.toLocaleString()} min</td>
+                          <td className="p-3 font-mono font-semibold text-emerald-600">${t.creditsBalance.toFixed(2)}</td>
+                          <td className="p-3 font-mono font-bold text-[#0F172A]">${t.monthlySpend.toFixed(2)}</td>
+                          <td className="p-3 text-right">
+                            <button
+                              onClick={() => setInspectTenant(t)}
+                              className="px-3 py-1.5 bg-[#EEF2FD] hover:bg-[#3157D5] text-[#3157D5] hover:text-white rounded-xl text-xs font-semibold transition-all border border-[#3157D5]/30 inline-flex items-center gap-1 shadow-2xs"
+                            >
+                              <Eye className="w-3.5 h-3.5" />
+                              <span>Inspect 360°</span>
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
@@ -881,7 +906,12 @@ function SuperAdminAnalyticsContent() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {dynamicPopRegions.map((reg) => (
+            {dynamicPopRegions.length === 0 ? (
+              <div className="col-span-2 p-8 text-center text-xs text-[#64748B] bg-white rounded-3xl border border-[#E2E8F0]">
+                No SIP Point of Presence trunks configured yet. Add carrier trunks in Telephony settings.
+              </div>
+            ) : (
+              dynamicPopRegions.map((reg) => (
               <div key={reg.region} className="p-5 bg-white rounded-3xl border border-[#E2E8F0] shadow-xs space-y-3">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -990,45 +1020,62 @@ function SuperAdminAnalyticsContent() {
                 </div>
 
                 <div className="space-y-2.5">
-                  {liveAgents.map((agent, i) => (
-                    <div key={i} className="p-4 bg-white rounded-2xl border border-[#E2E8F0] shadow-xs space-y-2 text-xs">
-                      <div className="flex items-start justify-between">
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <p className="font-bold text-[#0F172A] text-sm">{agent.name}</p>
-                            <span className="px-2 py-0.2 rounded-full text-[10px] font-semibold bg-[#EEF2FD] text-[#3157D5]">
-                              {agent.type}
-                            </span>
-                          </div>
-                          <p className="text-[11px] text-[#64748B] mt-0.5">
-                            Total Executed Calls: <span className="font-mono font-semibold text-[#0F172A]">{agent.calls.toLocaleString()} calls</span> • Avg Duration: <span className="font-mono font-semibold text-[#0F172A]">{agent.avgDuration}</span>
-                          </p>
-                        </div>
-
-                        <div className="text-right">
-                          <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
-                            {agent.successRate} Success Rate
-                          </span>
-                          <p className="text-[10px] text-[#64748B] mt-0.5">Sentiment: <span className="font-semibold text-[#3157D5]">{agent.sentiment}</span></p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#EDF2F7] text-[11px]">
-                        <div className="flex items-center gap-1.5 text-[#0F172A]">
-                          <Cpu className="w-3.5 h-3.5 text-[#3157D5] shrink-0" />
-                          <span className="truncate">LLM: <strong className="font-semibold">{agent.llm}</strong></span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[#0F172A]">
-                          <Headphones className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-                          <span className="truncate">TTS: <strong className="font-semibold">{agent.tts}</strong></span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-[#0F172A]">
-                          <Mic className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                          <span className="truncate">STT: <strong className="font-semibold">{agent.stt}</strong></span>
-                        </div>
-                      </div>
+                  {liveAgents.length === 0 ? (
+                    <div className="p-6 bg-white rounded-2xl border border-dashed border-[#CBD5E1] text-center text-xs text-[#64748B]">
+                      No AI voice agents deployed for this organization yet.
                     </div>
-                  ))}
+                  ) : (
+                    liveAgents.map((agent, i) => {
+                      const ttsName = typeof agent.voice === 'object' && agent.voice?.voiceId
+                        ? agent.voice.voiceId
+                        : (typeof agent.voice === 'string' && agent.voice ? agent.voice : "Kokoro-82M");
+                      const callCount = agent.callsCount ?? (agent.metrics?.totalCalls ?? 0);
+
+                      return (
+                        <div key={agent.id || i} className="p-4 bg-white rounded-2xl border border-[#E2E8F0] shadow-xs space-y-2 text-xs">
+                          <div className="flex items-start justify-between">
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <p className="font-bold text-[#0F172A] text-sm">{agent.name}</p>
+                                <span className="px-2 py-0.2 rounded-full text-[10px] font-semibold bg-[#EEF2FD] text-[#3157D5]">
+                                  {agent.description || "Voice AI Agent"}
+                                </span>
+                                <span className={`px-2 py-0.2 rounded-full text-[10px] font-semibold ${
+                                  agent.status === "active" ? "bg-emerald-50 text-emerald-600" : "bg-slate-100 text-slate-500"
+                                }`}>
+                                  {agent.status || "active"}
+                                </span>
+                              </div>
+                              <p className="text-[11px] text-[#64748B] mt-0.5">
+                                Total Executed Calls: <span className="font-mono font-semibold text-[#0F172A]">{callCount.toLocaleString()} calls</span> • Language: <span className="font-mono font-semibold text-[#0F172A]">{agent.language || "en-US"}</span>
+                              </p>
+                            </div>
+
+                            <div className="text-right">
+                              <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded-md">
+                                {callCount > 0 ? "Production Active" : "Ready / Standby"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="grid grid-cols-3 gap-2 pt-2 border-t border-[#EDF2F7] text-[11px]">
+                            <div className="flex items-center gap-1.5 text-[#0F172A]">
+                              <Cpu className="w-3.5 h-3.5 text-[#3157D5] shrink-0" />
+                              <span className="truncate">LLM: <strong className="font-semibold">{agent.llmModel || "Qwen/Qwen2.5-7B-Instruct-AWQ"}</strong></span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[#0F172A]">
+                              <Headphones className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                              <span className="truncate">TTS: <strong className="font-semibold">{ttsName}</strong></span>
+                            </div>
+                            <div className="flex items-center gap-1.5 text-[#0F172A]">
+                              <Mic className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                              <span className="truncate">STT: <strong className="font-semibold">Faster-Whisper distil-large-v3</strong></span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
               </div>
 

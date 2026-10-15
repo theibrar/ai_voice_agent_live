@@ -30,8 +30,11 @@ export default function SuperAdminMissionControl() {
     tenants,
     refreshTenants,
     superAdmins,
+    refreshSuperAdmins,
     sipCarriers,
+    refreshSipCarriers,
     auditLogs,
+    currentSuperAdmin,
   } = useSuperAdminStore();
 
   const [dbAnalytics, setDbAnalytics] = useState<any>({ call_analytics: [], lead_analytics: [] });
@@ -40,6 +43,8 @@ export default function SuperAdminMissionControl() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     refreshTenants();
+    refreshSuperAdmins();
+    refreshSipCarriers();
     async function loadAnalytics() {
       try {
         const apiUrl = getApiBase() + '/analytics/daily';
@@ -116,11 +121,11 @@ export default function SuperAdminMissionControl() {
 
         <div className="hidden lg:flex flex-col items-center justify-center p-5 rounded-2xl bg-white/10 border border-white/20 shrink-0 z-10 text-center space-y-1 backdrop-blur-xs">
           <div className="w-14 h-14 rounded-2xl bg-white text-[#0F172A] flex items-center justify-center font-black text-lg shadow-lg">
-            AV
+            {currentSuperAdmin?.name ? currentSuperAdmin.name.substring(0, 2).toUpperCase() : "SA"}
           </div>
-          <span className="text-xs font-bold text-white">Alexander Vance</span>
+          <span className="text-xs font-bold text-white">{currentSuperAdmin?.name || "Master Super Admin"}</span>
           <span className="text-[10px] text-amber-300 font-bold bg-white/10 px-2 py-0.5 rounded-md border border-white/20">
-            👑 Root Super Admin
+            👑 {currentSuperAdmin?.role || "Root Super Admin"}
           </span>
         </div>
       </div>
@@ -261,27 +266,33 @@ export default function SuperAdminMissionControl() {
             </div>
 
             <div className="space-y-3 mt-3">
-              {sipCarriers.map((carrier) => (
-                <div
-                  key={carrier.id}
-                  className="p-3 bg-white hover:bg-[#EEF2FD] rounded-2xl border border-[#E2E8F0] transition-colors"
-                >
-                  <div className="flex items-center justify-between text-xs font-bold text-[#0F172A]">
-                    <span>{carrier.name}</span>
-                    <span className="font-mono text-[#3157D5]">{carrier.allocatedChannels} / {carrier.maxChannels} ch</span>
-                  </div>
-                  <div className="w-full bg-[#E2E8F0] h-1.5 rounded-full overflow-hidden mt-2">
-                    <div
-                      className="bg-[#3157D5] h-full rounded-full"
-                      style={{ width: `${(carrier.allocatedChannels / carrier.maxChannels) * 100}%` }}
-                    />
-                  </div>
-                  <div className="flex justify-between text-[10px] text-[#64748B] mt-1.5">
-                    <span>Rate: ${carrier.ratePerMinuteWholesale}/min wholesale</span>
-                    <span className="font-semibold text-emerald-600">● {carrier.status}</span>
-                  </div>
+              {sipCarriers.length === 0 ? (
+                <div className="p-4 text-center text-xs text-[#64748B] bg-[#F8FAFC] rounded-2xl border border-dashed border-[#CBD5E1]">
+                  No SIP carrier trunks connected yet.
                 </div>
-              ))}
+              ) : (
+                sipCarriers.map((carrier) => (
+                  <div
+                    key={carrier.id}
+                    className="p-3 bg-white hover:bg-[#EEF2FD] rounded-2xl border border-[#E2E8F0] transition-colors"
+                  >
+                    <div className="flex items-center justify-between text-xs font-bold text-[#0F172A]">
+                      <span>{carrier.name}</span>
+                      <span className="font-mono text-[#3157D5]">{carrier.allocatedChannels} / {carrier.maxChannels} ch</span>
+                    </div>
+                    <div className="w-full bg-[#E2E8F0] h-1.5 rounded-full overflow-hidden mt-2">
+                      <div
+                        className="bg-[#3157D5] h-full rounded-full"
+                        style={{ width: `${(carrier.allocatedChannels / carrier.maxChannels) * 100}%` }}
+                      />
+                    </div>
+                    <div className="flex justify-between text-[10px] text-[#64748B] mt-1.5">
+                      <span>Rate: ${carrier.ratePerMinuteWholesale}/min wholesale</span>
+                      <span className="font-semibold text-emerald-600">● {carrier.status}</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
@@ -323,29 +334,37 @@ export default function SuperAdminMissionControl() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0]">
-                {tenants.map((t) => (
-                  <tr key={t.id} className="hover:bg-[#EEF2FD]/40 transition-colors">
-                    <td className="p-3 font-bold text-[#0F172A]">
-                      <div>
-                        <p>{t.orgName}</p>
-                        <p className="text-[10px] text-[#64748B] font-normal">{t.primaryAdminEmail}</p>
-                      </div>
-                    </td>
-                    <td className="p-3 font-semibold text-[#3157D5]">{t.planName}</td>
-                    <td className="p-3 font-mono font-bold text-[#0F172A]">${t.creditsBalance.toFixed(2)}</td>
-                    <td className="p-3 font-mono text-[#64748B]">{t.totalMinutesUsedThisMonth.toLocaleString()}</td>
-                    <td className="p-3 font-bold text-[#0F172A] font-mono">${t.monthlySpend.toFixed(2)}</td>
-                    <td className="p-3">
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
-                        t.status === "active"
-                          ? "bg-[#EEF2FD] text-[#3157D5]"
-                          : "bg-[#F1F5F9] text-[#64748B]"
-                      }`}>
-                        {t.status}
-                      </span>
+                {tenants.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-[#64748B] text-xs">
+                      No tenant organizations found in database.
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  tenants.map((t) => (
+                    <tr key={t.id} className="hover:bg-[#EEF2FD]/40 transition-colors">
+                      <td className="p-3 font-bold text-[#0F172A]">
+                        <div>
+                          <p>{t.orgName}</p>
+                          <p className="text-[10px] text-[#64748B] font-normal">{t.primaryAdminEmail}</p>
+                        </div>
+                      </td>
+                      <td className="p-3 font-semibold text-[#3157D5]">{t.planName}</td>
+                      <td className="p-3 font-mono font-bold text-[#0F172A]">${t.creditsBalance.toFixed(2)}</td>
+                      <td className="p-3 font-mono text-[#64748B]">{t.totalMinutesUsedThisMonth.toLocaleString()}</td>
+                      <td className="p-3 font-bold text-[#0F172A] font-mono">${t.monthlySpend.toFixed(2)}</td>
+                      <td className="p-3">
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          t.status === "active"
+                            ? "bg-[#EEF2FD] text-[#3157D5]"
+                            : "bg-[#F1F5F9] text-[#64748B]"
+                        }`}>
+                          {t.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>

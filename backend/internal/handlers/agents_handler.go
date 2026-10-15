@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -132,6 +134,8 @@ type AgentModel struct {
 	CallEndingRules       json.RawMessage `json:"callEndingRules"`
 	HumanRealism          json.RawMessage `json:"humanRealism"`
 	Metrics               json.RawMessage `json:"metrics"`
+	TenantID              int             `json:"tenantId"`
+	CallsCount            int             `json:"callsCount"`
 	CreatedAt             string          `json:"createdAt"`
 	LastUpdated           string          `json:"lastUpdated"`
 }
@@ -141,17 +145,42 @@ func (h *AgentsHandler) GetAgents(c *gin.Context) {
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 5*time.Second)
 	defer cancel()
 
+	userRole, _ := c.Get("userRole")
 	tenantID := c.GetInt("tenantID")
 	if tenantID <= 0 {
 		tenantID = 1
 	}
 
-	rows, err := h.db.Query(ctx, `
-		SELECT id, name, description, avatar, color, status, voice, llm_model, language, greeting, system_prompt, response_style, interruption_sensitivity, silence_timeout_seconds, max_call_duration_minutes, knowledge_base_ids, tools, COALESCE(assigned_phone_number, ''), COALESCE(assigned_phone_number_id, ''), transfer_rules, call_ending_rules, COALESCE(human_realism, '{}'::jsonb), metrics, created_at, updated_at
-		FROM agents
-		WHERE tenant_id = $1 OR tenant_id IS NULL
-		ORDER BY created_at ASC`, tenantID)
+	queryTenantID := strings.TrimSpace(c.Query("tenant_id"))
+	fetchAll := false
+	filterTenantID := tenantID
 
+	if userRole == "super_admin" || queryTenantID != "" {
+		if queryTenantID == "all" || (userRole == "super_admin" && queryTenantID == "") {
+			fetchAll = true
+		} else if queryTenantID != "" {
+			clean := strings.TrimPrefix(queryTenantID, "tenant-")
+			if id, err := strconv.Atoi(clean); err == nil {
+				filterTenantID = id
+			}
+		}
+	}
+
+	query := `
+		SELECT 
+			a.id, a.name, a.description, a.avatar, a.color, a.status,
+			a.voice, a.llm_model, a.language, a.greeting, a.system_prompt,
+			a.response_style, a.interruption_sensitivity, a.silence_timeout_seconds,
+			a.max_call_duration_minutes, a.knowledge_base_ids, a.tools,
+			COALESCE(a.assigned_phone_number, ''), COALESCE(a.assigned_phone_number_id, ''),
+			a.transfer_rules, a.call_ending_rules, COALESCE(a.human_realism, '{}'::jsonb),
+			a.metrics, a.created_at, a.updated_at, COALESCE(a.tenant_id, 1),
+			COALESCE((SELECT COUNT(*) FROM call_records cr WHERE cr.agent_id = a.id OR cr.agent_name = a.name), 0) AS calls_count
+		FROM agents a
+		WHERE ($1 = true OR a.tenant_id = $2 OR a.tenant_id IS NULL)
+		ORDER BY a.created_at ASC`
+
+	rows, err := h.db.Query(ctx, query, fetchAll, filterTenantID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch agents from database: " + err.Error()})
 		return
@@ -170,7 +199,7 @@ func (h *AgentsHandler) GetAgents(c *gin.Context) {
 			&a.ResponseStyle, &a.InterruptionSens, &a.SilenceTimeoutSec, &a.MaxCallDurationMin,
 			&kbB, &toolsB, &a.AssignedPhoneNumber, &a.AssignedPhoneNumberID,
 			&transferB, &endingB, &hrB, &metricsB,
-			&createdAt, &updatedAt,
+			&createdAt, &updatedAt, &a.TenantID, &a.CallsCount,
 		)
 		if err == nil {
 			a.Voice = json.RawMessage(voiceB)
