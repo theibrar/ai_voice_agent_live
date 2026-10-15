@@ -404,14 +404,14 @@ function SuperAdminSidebarContent() {
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2.5">
                 <div className="w-8 h-8 rounded-xl bg-[#3157D5] text-white flex items-center justify-center font-extrabold text-xs shadow-md shadow-[#3157D5]/20">
-                  {currentSuperAdmin.avatar}
+                  {currentSuperAdmin?.avatar || "SA"}
                 </div>
                 <div className="flex flex-col">
                   <span className="text-xs font-bold text-[#0F172A] leading-tight truncate max-w-[110px]">
-                    {currentSuperAdmin.name}
+                    {currentSuperAdmin?.name || "Super Admin"}
                   </span>
                   <span className="text-[10px] text-[#3157D5] font-semibold">
-                    {currentSuperAdmin.role}
+                    {currentSuperAdmin?.role || "Master Super Admin"}
                   </span>
                 </div>
               </div>
@@ -426,7 +426,7 @@ function SuperAdminSidebarContent() {
           ) : (
             <div className="flex flex-col items-center gap-3 py-1">
               <div className="w-9 h-9 rounded-2xl bg-[#3157D5] text-white flex items-center justify-center font-extrabold text-xs shadow-md shadow-[#3157D5]/20">
-                {currentSuperAdmin.avatar}
+                {currentSuperAdmin?.avatar || "SA"}
               </div>
             </div>
           )}

@@ -39,8 +39,10 @@ export default function SuperAdminMissionControl() {
 
   const [dbAnalytics, setDbAnalytics] = useState<any>({ call_analytics: [], lead_analytics: [] });
   const [platformRevenueTrend, setPlatformRevenueTrend] = useState<any[]>([]);
+  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
     if (typeof window === "undefined") return;
     refreshTenants();
     refreshSuperAdmins();
@@ -55,8 +57,8 @@ export default function SuperAdminMissionControl() {
           if (data && data.call_analytics && data.call_analytics.length > 0) {
             const trend = data.call_analytics.map((item: any) => ({
               month: item.date,
-              revenue: item.completed_calls * 10,
-              minutes: item.avg_duration_seconds * item.total_calls,
+              revenue: Number(item.completed_calls || 0) * 10,
+              minutes: Number(item.avg_duration_seconds || 0) * Number(item.total_calls || 0),
             }));
             setPlatformRevenueTrend(trend);
           }
@@ -66,12 +68,12 @@ export default function SuperAdminMissionControl() {
       }
     }
     loadAnalytics();
-  }, []);
+  }, [refreshTenants, refreshSuperAdmins, refreshSipCarriers]);
 
-  const totalMonthlySpend = tenants.reduce((acc, t) => acc + (t.monthlySpend || 0), 0);
-  const totalActiveCalls = tenants.reduce((acc, t) => acc + (t.activeCallsNow || 0), 0);
-  const totalMinutesThisMonth = tenants.reduce((acc, t) => acc + (t.totalMinutesUsedThisMonth || 0), 0);
-  const totalCreditsAllocated = tenants.reduce((acc, t) => acc + (t.creditsBalance || 0), 0);
+  const totalMonthlySpend = (tenants || []).reduce((acc, t) => acc + (Number(t?.monthlySpend) || 0), 0);
+  const totalActiveCalls = (tenants || []).reduce((acc, t) => acc + (Number(t?.activeCallsNow) || 0), 0);
+  const totalMinutesThisMonth = (tenants || []).reduce((acc, t) => acc + (Number(t?.totalMinutesUsedThisMonth) || 0), 0);
+  const totalCreditsAllocated = (tenants || []).reduce((acc, t) => acc + (Number(t?.creditsBalance) || 0), 0);
 
   return (
     <div className="space-y-8">
@@ -194,7 +196,7 @@ export default function SuperAdminMissionControl() {
             </div>
           </div>
           <div className="text-2xl font-black text-[#0F172A] tracking-tight">
-            {tenants.reduce((acc, t) => acc + t.maxConcurrency, 0)} Channels
+            {(tenants || []).reduce((acc, t) => acc + (Number(t?.maxConcurrency) || 0), 0)} Channels
           </div>
           <span className="text-xs text-[#3157D5] font-bold">
             Elastic Carrier Trunking Active
@@ -220,38 +222,44 @@ export default function SuperAdminMissionControl() {
           </div>
 
           <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={platformRevenueTrend} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <defs>
-                  <linearGradient id="superRevenueGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#3157D5" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#3157D5" stopOpacity={0.0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EDF2F7" />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={false} />
-                <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
-                <Tooltip
-                  contentStyle={{
-                    backgroundColor: "#0F172A",
-                    border: "none",
-                    borderRadius: "12px",
-                    color: "#FFFFFF",
-                    fontSize: "12px",
-                  }}
-                  formatter={(val: any) => [`$${Number(val).toLocaleString()}`, "Platform Revenue"]}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="revenue"
-                  stroke="#3157D5"
-                  strokeWidth={3}
-                  fillOpacity={1}
-                  fill="url(#superRevenueGrad)"
-                  name="Platform Revenue"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            {mounted ? (
+              <ResponsiveContainer width="100%" height="100%">
+                <AreaChart data={platformRevenueTrend} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <defs>
+                    <linearGradient id="superRevenueGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3157D5" stopOpacity={0.4} />
+                      <stop offset="95%" stopColor="#3157D5" stopOpacity={0.0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#EDF2F7" />
+                  <XAxis dataKey="month" tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={false} />
+                  <YAxis tick={{ fontSize: 11, fill: "#64748B" }} tickLine={false} axisLine={false} tickFormatter={(v) => `$${v / 1000}k`} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "#0F172A",
+                      border: "none",
+                      borderRadius: "12px",
+                      color: "#FFFFFF",
+                      fontSize: "12px",
+                    }}
+                    formatter={(val: any) => [`$${Number(val).toLocaleString()}`, "Platform Revenue"]}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="revenue"
+                    stroke="#3157D5"
+                    strokeWidth={3}
+                    fillOpacity={1}
+                    fill="url(#superRevenueGrad)"
+                    name="Platform Revenue"
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="h-full w-full flex items-center justify-center text-xs text-[#64748B]">
+                Loading telemetry trend...
+              </div>
+            )}
           </div>
         </div>
 
@@ -266,32 +274,37 @@ export default function SuperAdminMissionControl() {
             </div>
 
             <div className="space-y-3 mt-3">
-              {sipCarriers.length === 0 ? (
+              {(sipCarriers || []).length === 0 ? (
                 <div className="p-4 text-center text-xs text-[#64748B] bg-[#F8FAFC] rounded-2xl border border-dashed border-[#CBD5E1]">
                   No SIP carrier trunks connected yet.
                 </div>
               ) : (
-                sipCarriers.map((carrier) => (
-                  <div
-                    key={carrier.id}
-                    className="p-3 bg-white hover:bg-[#EEF2FD] rounded-2xl border border-[#E2E8F0] transition-colors"
-                  >
-                    <div className="flex items-center justify-between text-xs font-bold text-[#0F172A]">
-                      <span>{carrier.name}</span>
-                      <span className="font-mono text-[#3157D5]">{carrier.allocatedChannels} / {carrier.maxChannels} ch</span>
+                sipCarriers.map((carrier) => {
+                  const maxCh = Number(carrier.maxChannels) || 1;
+                  const allocCh = Number(carrier.allocatedChannels) || 0;
+                  const pct = Math.min(100, Math.round((allocCh / maxCh) * 100));
+                  return (
+                    <div
+                      key={carrier.id}
+                      className="p-3 bg-white hover:bg-[#EEF2FD] rounded-2xl border border-[#E2E8F0] transition-colors"
+                    >
+                      <div className="flex items-center justify-between text-xs font-bold text-[#0F172A]">
+                        <span>{carrier.name}</span>
+                        <span className="font-mono text-[#3157D5]">{allocCh} / {maxCh} ch</span>
+                      </div>
+                      <div className="w-full bg-[#E2E8F0] h-1.5 rounded-full overflow-hidden mt-2">
+                        <div
+                          className="bg-[#3157D5] h-full rounded-full"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                      <div className="flex justify-between text-[10px] text-[#64748B] mt-1.5">
+                        <span>Rate: ${Number(carrier.ratePerMinuteWholesale || 0).toFixed(4)}/min wholesale</span>
+                        <span className="font-semibold text-emerald-600">● {carrier.status || "active"}</span>
+                      </div>
                     </div>
-                    <div className="w-full bg-[#E2E8F0] h-1.5 rounded-full overflow-hidden mt-2">
-                      <div
-                        className="bg-[#3157D5] h-full rounded-full"
-                        style={{ width: `${(carrier.allocatedChannels / carrier.maxChannels) * 100}%` }}
-                      />
-                    </div>
-                    <div className="flex justify-between text-[10px] text-[#64748B] mt-1.5">
-                      <span>Rate: ${carrier.ratePerMinuteWholesale}/min wholesale</span>
-                      <span className="font-semibold text-emerald-600">● {carrier.status}</span>
-                    </div>
-                  </div>
-                ))
+                  );
+                })
               )}
             </div>
           </div>
@@ -334,7 +347,7 @@ export default function SuperAdminMissionControl() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#E2E8F0]">
-                {tenants.length === 0 ? (
+                {(tenants || []).length === 0 ? (
                   <tr>
                     <td colSpan={6} className="p-8 text-center text-[#64748B] text-xs">
                       No tenant organizations found in database.
@@ -345,21 +358,21 @@ export default function SuperAdminMissionControl() {
                     <tr key={t.id} className="hover:bg-[#EEF2FD]/40 transition-colors">
                       <td className="p-3 font-bold text-[#0F172A]">
                         <div>
-                          <p>{t.orgName}</p>
-                          <p className="text-[10px] text-[#64748B] font-normal">{t.primaryAdminEmail}</p>
+                          <p>{t.orgName || "Unnamed Organization"}</p>
+                          <p className="text-[10px] text-[#64748B] font-normal">{t.primaryAdminEmail || "—"}</p>
                         </div>
                       </td>
-                      <td className="p-3 font-semibold text-[#3157D5]">{t.planName}</td>
-                      <td className="p-3 font-mono font-bold text-[#0F172A]">${t.creditsBalance.toFixed(2)}</td>
-                      <td className="p-3 font-mono text-[#64748B]">{t.totalMinutesUsedThisMonth.toLocaleString()}</td>
-                      <td className="p-3 font-bold text-[#0F172A] font-mono">${t.monthlySpend.toFixed(2)}</td>
+                      <td className="p-3 font-semibold text-[#3157D5]">{t.planName || "Enterprise Tier"}</td>
+                      <td className="p-3 font-mono font-bold text-[#0F172A]">${(Number(t.creditsBalance) || 0).toFixed(2)}</td>
+                      <td className="p-3 font-mono text-[#64748B]">{(Number(t.totalMinutesUsedThisMonth) || 0).toLocaleString()}</td>
+                      <td className="p-3 font-bold text-[#0F172A] font-mono">${(Number(t.monthlySpend) || 0).toFixed(2)}</td>
                       <td className="p-3">
                         <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
                           t.status === "active"
                             ? "bg-[#EEF2FD] text-[#3157D5]"
                             : "bg-[#F1F5F9] text-[#64748B]"
                         }`}>
-                          {t.status}
+                          {t.status || "active"}
                         </span>
                       </td>
                     </tr>
@@ -380,14 +393,16 @@ export default function SuperAdminMissionControl() {
           </div>
 
           <div className="space-y-3">
-            {auditLogs.slice(0, 5).map((log) => (
+            {(auditLogs || []).slice(0, 5).map((log) => (
               <div key={log.id} className="p-3 bg-white rounded-2xl border border-[#E2E8F0] space-y-1 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="font-bold text-[#0F172A]">{log.actorName}</span>
-                  <span className="text-[10px] text-[#64748B] font-mono">{log.timestamp.substring(11, 16)}</span>
+                  <span className="font-bold text-[#0F172A]">{log.actorName || "Super Admin"}</span>
+                  <span className="text-[10px] text-[#64748B] font-mono">
+                    {log.timestamp && log.timestamp.length >= 16 ? log.timestamp.substring(11, 16) : (log.timestamp || "Just now")}
+                  </span>
                 </div>
                 <p className="text-[11px] text-[#64748B] leading-snug">{log.action}</p>
-                <span className="text-[10px] font-semibold text-[#3157D5]">{log.actorRole}</span>
+                <span className="text-[10px] font-semibold text-[#3157D5]">{log.actorRole || "Master Super Admin"}</span>
               </div>
             ))}
           </div>

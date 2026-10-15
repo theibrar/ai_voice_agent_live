@@ -613,12 +613,12 @@ function SuperAdminAnalyticsContent() {
                             </span>
                           </td>
                           <td className="p-3">
-                            <div className="font-mono text-[#0F172A] font-semibold">{t.activeCallsNow} / {t.maxConcurrency} lines</div>
-                            <span className="text-[10px] text-[#64748B] truncate max-w-[140px] block">{t.assignedSipCarrier}</span>
+                            <div className="font-mono text-[#0F172A] font-semibold">{Number(t.activeCallsNow) || 0} / {Number(t.maxConcurrency) || 10} lines</div>
+                            <span className="text-[10px] text-[#64748B] truncate max-w-[140px] block">{t.assignedSipCarrier || "Direct SIP"}</span>
                           </td>
-                          <td className="p-3 font-mono font-semibold text-[#0F172A]">{t.totalMinutesUsedThisMonth.toLocaleString()} min</td>
-                          <td className="p-3 font-mono font-semibold text-emerald-600">${t.creditsBalance.toFixed(2)}</td>
-                          <td className="p-3 font-mono font-bold text-[#0F172A]">${t.monthlySpend.toFixed(2)}</td>
+                          <td className="p-3 font-mono font-semibold text-[#0F172A]">{(Number(t.totalMinutesUsedThisMonth) || 0).toLocaleString()} min</td>
+                          <td className="p-3 font-mono font-semibold text-emerald-600">${(Number(t.creditsBalance) || 0).toFixed(2)}</td>
+                          <td className="p-3 font-mono font-bold text-[#0F172A]">${(Number(t.monthlySpend) || 0).toFixed(2)}</td>
                           <td className="p-3 text-right">
                             <button
                               onClick={() => setInspectTenant(t)}
@@ -988,25 +988,25 @@ function SuperAdminAnalyticsContent() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                 <div className="p-3.5 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] space-y-1">
                   <span className="text-[#64748B] text-[10px] uppercase font-semibold">Credits Balance</span>
-                  <p className="font-mono text-base font-bold text-emerald-600">${liveInspectTenant.creditsBalance.toFixed(2)}</p>
+                  <p className="font-mono text-base font-bold text-emerald-600">${(Number(liveInspectTenant.creditsBalance) || 0).toFixed(2)}</p>
                   <span className="text-[10px] text-[#64748B]">Auto-Recharge Active</span>
                 </div>
 
                 <div className="p-3.5 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] space-y-1">
                   <span className="text-[#64748B] text-[10px] uppercase font-semibold">Billed Voice Mins</span>
-                  <p className="font-mono text-base font-bold text-[#0F172A]">{liveInspectTenant.totalMinutesUsedThisMonth.toLocaleString()} min</p>
-                  <span className="text-[10px] text-[#64748B]">${liveInspectTenant.creditRatePerMinute.toFixed(2)} / minute rate</span>
+                  <p className="font-mono text-base font-bold text-[#0F172A]">{(Number(liveInspectTenant.totalMinutesUsedThisMonth) || 0).toLocaleString()} min</p>
+                  <span className="text-[10px] text-[#64748B]">${(Number(liveInspectTenant.creditRatePerMinute) || 0.08).toFixed(2)} / minute rate</span>
                 </div>
 
                 <div className="p-3.5 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] space-y-1">
                   <span className="text-[#64748B] text-[10px] uppercase font-semibold">Live Concurrent SIP</span>
-                  <p className="font-mono text-base font-bold text-[#3157D5]">{liveInspectTenant.activeCallsNow} / {liveInspectTenant.maxConcurrency} channels</p>
-                  <span className="text-[10px] text-[#64748B] truncate max-w-[130px] block">{liveInspectTenant.assignedSipCarrier}</span>
+                  <p className="font-mono text-base font-bold text-[#3157D5]">{Number(liveInspectTenant.activeCallsNow) || 0} / {Number(liveInspectTenant.maxConcurrency) || 10} channels</p>
+                  <span className="text-[10px] text-[#64748B] truncate max-w-[130px] block">{liveInspectTenant.assignedSipCarrier || "Direct SIP"}</span>
                 </div>
 
                 <div className="p-3.5 bg-[#F8FAFC] rounded-2xl border border-[#E2E8F0] space-y-1">
                   <span className="text-[#64748B] text-[10px] uppercase font-semibold">Monthly Spend</span>
-                  <p className="font-mono text-base font-bold text-[#0F172A]">${liveInspectTenant.monthlySpend.toFixed(2)}</p>
+                  <p className="font-mono text-base font-bold text-[#0F172A]">${(Number(liveInspectTenant.monthlySpend) || 0).toFixed(2)}</p>
                   <span className="text-[10px] text-emerald-600 font-semibold">88.9% Platform Margin</span>
                 </div>
               </div>

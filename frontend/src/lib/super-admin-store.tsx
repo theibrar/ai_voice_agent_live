@@ -288,11 +288,17 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
       });
       if (res.ok) {
         const data = await res.json();
-        if (data && Array.isArray(data.tenants) && data.tenants.length > 0) {
-          setTenants(data.tenants);
-        } else if (data && Array.isArray(data.tenants)) {
-          setTenants(data.tenants);
-        }
+        const rawList = Array.isArray(data?.tenants) ? data.tenants : [];
+        const sanitized = rawList.map((t: any) => ({
+          ...t,
+          creditsBalance: Number(t?.creditsBalance) || 0,
+          creditRatePerMinute: Number(t?.creditRatePerMinute) || 0.08,
+          monthlySpend: Number(t?.monthlySpend) || 0,
+          maxConcurrency: Number(t?.maxConcurrency) || 10,
+          activeCallsNow: Number(t?.activeCallsNow) || 0,
+          totalMinutesUsedThisMonth: Number(t?.totalMinutesUsedThisMonth || t?.totalMinutesUsed) || 0,
+        }));
+        setTenants(sanitized);
       }
     } catch (err) {
       console.warn("Tenants database API standby:", err);
@@ -312,17 +318,27 @@ export function SuperAdminProvider({ children }: { children: ReactNode }) {
         if (data && Array.isArray(data.users)) {
           const saUsers = data.users.filter((u: any) => u.role === "super_admin");
           if (saUsers.length > 0) {
-            setSuperAdmins(saUsers.map((u: any) => ({
-              id: u.id,
-              name: u.name,
-              email: u.email,
-              role: "Master Super Admin",
-              permissions: ["all_access", "billing_override", "infrastructure_control", "tenant_impersonation"],
-              twoFactorEnabled: true,
-              lastActive: u.lastLogin ? new Date(u.lastLogin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now",
-              avatar: u.name.split(" ").map((n: string) => n[0]).join("").toUpperCase().substring(0, 2) || "SA",
-              status: u.status || "active",
-            })));
+            setSuperAdmins(saUsers.map((u: any) => {
+              const nameStr = (u.name || u.email || "Super Admin").trim();
+              const initials = nameStr
+                .split(/\s+/)
+                .filter(Boolean)
+                .map((n: string) => n[0])
+                .join("")
+                .toUpperCase()
+                .substring(0, 2) || "SA";
+              return {
+                id: String(u.id),
+                name: nameStr,
+                email: u.email || "",
+                role: "Master Super Admin",
+                permissions: ["all_access", "billing_override", "infrastructure_control", "tenant_impersonation"],
+                twoFactorEnabled: true,
+                lastActive: u.lastLogin ? new Date(u.lastLogin).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "Just now",
+                avatar: initials,
+                status: u.status || "active",
+              };
+            }));
           }
         }
       }

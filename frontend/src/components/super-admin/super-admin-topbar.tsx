@@ -109,7 +109,7 @@ export function SuperAdminTopbar() {
                     >
                       <div>
                         <p className="font-bold text-[#0F172A]">{t.orgName}</p>
-                        <p className="text-[10px] text-[#64748B]">{t.planName} • {t.creditsBalance.toFixed(2)}</p>
+                        <p className="text-[10px] text-[#64748B]">{t.planName || "Enterprise Tier"} • ${(Number(t.creditsBalance) || 0).toFixed(2)}</p>
                       </div>
                       <span className="text-[10px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full">
                         Active
@@ -210,7 +210,7 @@ export function SuperAdminTopbar() {
             className="flex items-center gap-2 p-1 rounded-xl hover:bg-white/15 transition-colors focus:outline-hidden"
           >
             <div className="w-8 h-8 rounded-full bg-white text-[#3157D5] flex items-center justify-center font-black text-xs shadow-xs border-2 border-white/50">
-              {currentSuperAdmin.avatar}
+              {currentSuperAdmin?.avatar || "SA"}
             </div>
           </button>
 
@@ -219,10 +219,10 @@ export function SuperAdminTopbar() {
               <div className="fixed inset-0 z-40" onClick={() => setUserMenuOpen(false)} />
               <div className="absolute right-0 top-full mt-2 w-56 bg-white text-[#0F172A] rounded-2xl shadow-2xl border border-[#E2E8F0] py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
                 <div className="px-4 py-2 border-b border-[#E2E8F0]">
-                  <p className="text-xs font-bold text-[#0F172A]">{currentSuperAdmin.name}</p>
-                  <p className="text-[11px] text-[#64748B]">{currentSuperAdmin.email}</p>
+                  <p className="text-xs font-bold text-[#0F172A]">{currentSuperAdmin?.name || "Super Admin"}</p>
+                  <p className="text-[11px] text-[#64748B]">{currentSuperAdmin?.email || "admin@apexvoice.ai"}</p>
                   <span className="inline-block mt-1 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wider bg-[#EEF2FD] text-[#3157D5] rounded-md border border-[#3157D5]/20">
-                    {currentSuperAdmin.role}
+                    {currentSuperAdmin?.role || "Master Super Admin"}
                   </span>
                 </div>
 

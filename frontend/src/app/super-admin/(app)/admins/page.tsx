@@ -290,15 +290,15 @@ function SuperAdminTenantsContent() {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[#64748B]">Credits Balance:</span>
-                      <span className="font-bold text-[#0F172A] font-mono">${tenant.creditsBalance.toFixed(2)}</span>
+                      <span className="font-bold text-[#0F172A] font-mono">${(Number(tenant.creditsBalance) || 0).toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[#64748B]">Rate / Minute:</span>
-                      <span className="font-mono text-[#0F172A]">${tenant.creditRatePerMinute.toFixed(2)} / min</span>
+                      <span className="font-mono text-[#0F172A]">${(Number(tenant.creditRatePerMinute) || 0.08).toFixed(2)} / min</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-[#64748B]">Max Concurrency:</span>
-                      <span className="font-bold text-[#0F172A]">{tenant.maxConcurrency} SIP channels</span>
+                      <span className="font-bold text-[#0F172A]">{Number(tenant.maxConcurrency) || 10} SIP channels</span>
                     </div>
                   </div>
                 </div>
@@ -878,7 +878,7 @@ function SuperAdminTenantsContent() {
               </div>
               <div className="flex justify-between">
                 <span className="text-[#64748B]">Plan / Credits:</span>
-                <span className="font-mono text-emerald-600">${deleteModalTenant.creditsBalance.toFixed(2)}</span>
+                <span className="font-mono text-emerald-600">${(Number(deleteModalTenant?.creditsBalance) || 0).toFixed(2)}</span>
               </div>
             </div>
 
