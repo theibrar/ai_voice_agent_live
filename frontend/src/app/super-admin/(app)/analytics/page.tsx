@@ -944,8 +944,9 @@ function SuperAdminAnalyticsContent() {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            ))
+          )}
+        </div>
         </div>
       )}
 
