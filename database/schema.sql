@@ -603,3 +603,11 @@ INSERT INTO appointments (
 )
 ON CONFLICT (appointment_id) DO NOTHING;
 
+-- 11. Default Seed Users
+INSERT INTO users (id, name, email, password, role, tenant_id, avatar, phone, company, status, created_at, updated_at)
+VALUES 
+    ('usr-admin-1', 'Sarah Jenkins', 'admin@apexvoice.ai', 'Admin@123', 'admin', 1, '/avatars/sarah.png', '+1 (555) 234-5678', 'Apex Voice Enterprise', 'active', NOW(), NOW()),
+    ('usr-superadmin-1', 'Alexander Vance', 'alexander@apexsuperadmin.io', 'MasterSuperAdminKey2026!', 'super_admin', 0, '/avatars/alexander.png', '+1 (555) 019-9900', 'Apex Global Master Console', 'active', NOW(), NOW()),
+    ('usr-superadmin-2', 'Super Admin', 'superadmin@apexvoice.ai', 'SuperAdmin@123', 'super_admin', 0, '/avatars/alexander.png', '+1 (555) 019-9900', 'Apex Global Master Console', 'active', NOW(), NOW())
+ON CONFLICT (email) DO NOTHING;
+

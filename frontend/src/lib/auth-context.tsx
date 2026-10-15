@@ -175,7 +175,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!res.ok) {
           return {
             success: false,
-            error: data.error || "Invalid email or password. Please verify your credentials.",
+            error: data.error || "Your email and password are wrong",
           };
         }
 
@@ -193,7 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const isSuperAdmin = data.user?.role === "super_admin" || email.includes("superadmin");
         return { success: true, isSuperAdmin };
       } catch (err: any) {
-        lastError = "Unable to connect to authentication server. Please verify backend is running.";
+        lastError = "Your email and password are wrong";
       }
     }
 

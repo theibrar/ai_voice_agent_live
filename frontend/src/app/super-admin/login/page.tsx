@@ -43,7 +43,7 @@ export default function SuperAdminLoginPage() {
       }
     }
 
-    let lastError = "Unable to connect to authentication server. Please check backend.";
+    let lastError = "Your email and password are wrong";
 
     for (const endpoint of candidateEndpoints) {
       try {
@@ -60,7 +60,7 @@ export default function SuperAdminLoginPage() {
 
         const contentType = res.headers.get("content-type") || "";
         if (!contentType.includes("application/json")) {
-          lastError = `Server returned status ${res.status}. Expected JSON response.`;
+          lastError = "Your email and password are wrong";
           continue;
         }
 
@@ -68,7 +68,7 @@ export default function SuperAdminLoginPage() {
 
         if (!res.ok) {
           setIsLoading(false);
-          const errMsg = data.error || "Super Admin authentication failed. Invalid credentials.";
+          const errMsg = data.error || "Your email and password are wrong";
           setAuthError(errMsg);
           addToast({
             title: "Authentication Failed",
@@ -78,8 +78,13 @@ export default function SuperAdminLoginPage() {
           return;
         }
 
-        if (data.token && typeof document !== "undefined") {
-          document.cookie = `access_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+        if (data.token) {
+          if (typeof window !== "undefined") {
+            localStorage.setItem("access_token", data.token);
+          }
+          if (typeof document !== "undefined") {
+            document.cookie = `access_token=${data.token}; path=/; max-age=604800; SameSite=Lax`;
+          }
         }
 
         await refreshAuth();
@@ -99,20 +104,20 @@ export default function SuperAdminLoginPage() {
         setCurrentSuperAdmin(matchedAdmin);
         addToast({
           title: "Super Admin Authenticated",
-          description: `Welcome Master Console, ${matchedAdmin.name}. Full platform authorization active.`,
+          description: `Welcome to Mission Control, ${matchedAdmin.name}. Opening dashboard...`,
           type: "success",
         });
-        router.push("/super-admin");
+        window.location.href = "/super-admin";
         return;
       } catch (err: any) {
-        lastError = "Unable to connect to authentication server. Please check backend.";
+        lastError = "Your email and password are wrong";
       }
     }
 
     setIsLoading(false);
     setAuthError(lastError);
     addToast({
-      title: "Connection Error",
+      title: "Authentication Failed",
       description: lastError,
       type: "warning",
     });
@@ -215,11 +220,10 @@ export default function SuperAdminLoginPage() {
                 <ShieldCheck className="w-4 h-4 text-[#94A3B8] absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  required
                   maxLength={6}
                   value={otpCode}
                   onChange={(e) => setOtpCode(e.target.value)}
-                  placeholder="6-digit TOTP"
+                  placeholder="6-digit TOTP (optional)"
                   className="w-full pl-10 pr-4 py-2.5 bg-white border border-[#E2E8F0] rounded-xl font-mono text-xs text-[#0F172A] outline-none focus:border-[#3157D5]"
                 />
               </div>
@@ -234,6 +238,36 @@ export default function SuperAdminLoginPage() {
               <ArrowRight className="w-4 h-4" />
             </button>
           </form>
+
+          {/* Quick Demo Fill Helper */}
+          <div className="pt-2 border-t border-[#E2E8F0] space-y-2">
+            <p className="font-bold text-[11px] text-[#64748B] uppercase tracking-wider">Demo Super Admin Credentials</p>
+            <div className="flex flex-col gap-1.5">
+              <button
+                type="button"
+                onClick={() => fillTestCredentials("alexander@apexsuperadmin.io")}
+                className="w-full p-2 bg-[#F8FAFC] hover:bg-[#EEF2FD] border border-[#E2E8F0] hover:border-[#3157D5]/30 rounded-xl text-left transition-colors flex items-center justify-between cursor-pointer"
+              >
+                <div>
+                  <p className="font-bold text-[#0F172A] text-xs">Alexander Vance (Root)</p>
+                  <p className="text-[10px] text-[#64748B] font-mono">alexander@apexsuperadmin.io • MasterSuperAdminKey2026!</p>
+                </div>
+                <span className="text-[10px] font-bold text-[#3157D5] bg-[#EEF2FD] px-2 py-0.5 rounded-md">Autofill</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => fillTestCredentials("superadmin@apexvoice.ai")}
+                className="w-full p-2 bg-[#F8FAFC] hover:bg-[#EEF2FD] border border-[#E2E8F0] hover:border-[#3157D5]/30 rounded-xl text-left transition-colors flex items-center justify-between cursor-pointer"
+              >
+                <div>
+                  <p className="font-bold text-[#0F172A] text-xs">Super Admin (Standard)</p>
+                  <p className="text-[10px] text-[#64748B] font-mono">superadmin@apexvoice.ai • SuperAdmin@123</p>
+                </div>
+                <span className="text-[10px] font-bold text-[#3157D5] bg-[#EEF2FD] px-2 py-0.5 rounded-md">Autofill</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 

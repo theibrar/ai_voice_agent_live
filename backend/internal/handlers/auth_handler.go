@@ -125,6 +125,17 @@ func (h *AuthHandler) ensureSchemaAndSeed() {
 		ON CONFLICT (email) DO NOTHING;`
 		_, _ = h.db.Exec(ctx, seedSuperAdmin, superAdminHash)
 	}
+
+	var superAdmin2Exists bool
+	_ = h.db.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE LOWER(email) = 'superadmin@apexvoice.ai')").Scan(&superAdmin2Exists)
+	if !superAdmin2Exists {
+		superAdmin2Hash, _ := h.authService.HashPassword("SuperAdmin@123")
+		seedSuperAdmin2 := `
+		INSERT INTO users (id, name, email, password, role, tenant_id, avatar, phone, company, status, created_at, updated_at)
+		VALUES ('usr-superadmin-2', 'Super Admin', 'superadmin@apexvoice.ai', $1, 'super_admin', 0, '/avatars/alexander.png', '+1 (555) 019-9900', 'Apex Global Master Console', 'active', NOW(), NOW())
+		ON CONFLICT (email) DO NOTHING;`
+		_, _ = h.db.Exec(ctx, seedSuperAdmin2, superAdmin2Hash)
+	}
 }
 
 type LoginRequest struct {
@@ -183,7 +194,7 @@ type ResetPasswordRequest struct {
 func (h *AuthHandler) Login(c *gin.Context) {
 	var req LoginRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Email and password are required"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Your email and password are wrong"})
 		return
 	}
 
@@ -216,10 +227,10 @@ func (h *AuthHandler) Login(c *gin.Context) {
 		&u.ID, &u.Name, &u.Email, &u.Password, &u.Role, &u.TenantID, &u.Avatar, &u.Phone, &u.Company, &u.Status, &u.LastLogin,
 	)
 
-	// Generic error message to prevent account enumeration
+	// User not found: generic message
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "Invalid email or password. Please check your credentials.",
+			"error": "Your email and password are wrong",
 		})
 		return
 	}
@@ -227,7 +238,7 @@ func (h *AuthHandler) Login(c *gin.Context) {
 	// Verify password with Bcrypt
 	if !h.authService.CheckPasswordHash(req.Password, u.Password) {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"error": "Invalid email or password. Please check your credentials.",
+			"error": "Your email and password are wrong",
 		})
 		return
 	}
@@ -250,8 +261,8 @@ func (h *AuthHandler) Login(c *gin.Context) {
 
 	// Check role requirement if requested
 	if req.RequiredRole != "" && u.Role != req.RequiredRole && u.Role != "super_admin" {
-		c.JSON(http.StatusForbidden, gin.H{
-			"error": fmt.Sprintf("Access Denied: %s authorization required.", req.RequiredRole),
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"error": "Your email and password are wrong",
 		})
 		return
 	}

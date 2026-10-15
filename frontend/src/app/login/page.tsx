@@ -23,7 +23,7 @@ import { useAuth } from "@/lib/auth-context";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
+  password: z.string().min(1, "Password is required"),
   rememberMe: z.boolean().optional(),
 });
 
@@ -74,7 +74,7 @@ export default function LoginPage() {
     setIsLoading(false);
 
     if (!res.success) {
-      const errMsg = res.error || "Invalid email or password. Please check your credentials.";
+      const errMsg = res.error || "Your email and password are wrong";
       setAuthError(errMsg);
       addToast({
         title: "Authentication Failed",
@@ -91,9 +91,9 @@ export default function LoginPage() {
     });
 
     if (res.isSuperAdmin) {
-      router.push("/super-admin");
+      window.location.href = "/super-admin";
     } else {
-      router.push("/dashboard");
+      window.location.href = "/dashboard";
     }
   };
 
